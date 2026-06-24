@@ -148,7 +148,7 @@
 - **Consequence**:
   - ✅ **Đảm bảo toàn vẹn dữ liệu (Durability)**: Alert không bao giờ bị mất nhờ SQS FIFO lưu trữ tin nhắn tới 14 ngày kết hợp với S3 Audit Store lưu vết sự cố lâu dài.
   - ✅ **Khử trùng lặp tuyệt đối (Idempotency)**: Khử trùng 5 phút ở đầu vào bằng SQS FIFO và chống trùng lặp vĩnh viễn ở đầu ra thông qua cơ chế kiểm tra `idempotency_key` tại DynamoDB trước khi tạo ticket Jira/Slack.
-  - ✅ **Cô lập lỗi thông minh (Dead Letter Queue - DLQ)**: Tự động tách các alert lỗi format sang SQS DLQ giúp hệ thống không bị nghẽn mạch vô hạn.
+  - ✅ **Cô lập lỗi thông minh (Dead Letter Queue)**: Tự động tách các alert lỗi format sang SQS DLQ giúp hệ thống không bị nghẽn mạch vô hạn.
   - ✅ **Khả năng Replay mạnh mẽ**: Dễ dàng phát lại (replay) các alert lỗi từ DLQ về Queue chính sau khi đã vá lỗi ở AIOps Worker mà không cần giả lập lại dữ liệu từ nguồn phát ban đầu.
   - ⚠️ **Tăng độ phức tạp kiến trúc**: Phải quản lý và cấu hình nhiều cấu phần hạ tầng tích hợp (Ingest Lambda, SQS FIFO, SQS DLQ, DynamoDB State Table, và S3 Audit Store).
   - ⚠️ **Giới hạn băng thông mặc định**: SQS FIFO bị giới hạn tốc độ mặc định ở mức 300 TPS. Cần chủ động bật tính năng **High Throughput** cho FIFO để nâng giới hạn lên mức **3,000+ TPS** ngay từ đầu nhằm phòng ngừa các đợt bùng nổ cảnh báo lớn (Alert Storm).
