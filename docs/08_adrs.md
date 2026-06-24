@@ -135,7 +135,7 @@
 
 ---
 
-## ADR-007 - SQS FIFO and DynamoDB/S3 for Alert Event Pipeline
+## ADR-007 — SQS FIFO and DynamoDB/S3 for Alert Event Pipeline
 
 - **Status**: Accepted
 - **Date**: 2026-06-24
@@ -156,4 +156,5 @@
   - Option A: Chỉ sử dụng cơ chế Lambda Async Retry (rejected because thời gian lưu trữ và số lần thử lại của Lambda quá ngắn (tối đa vài tiếng). Nếu hệ thống AIOps chết qua đêm, alert sẽ bị nuốt mất. Không có hàng đợi rõ ràng, thiếu tính năng cô lập lỗi (DLQ) và cực kỳ khó debug/replay khi có alert lỗi format).
   - Option B: Chỉ sử dụng SQS Standard Queue (Hàng đợi thường) (rejected because loại hàng đợi thường có cơ chế giao hàng *at-least-once* (có thể gửi trùng message) và không đảm bảo đúng thứ tự. Điều này gây áp lực rất lớn lên tầng code logic của AIOps Worker khi phải tự xử lý bài toán chống trùng dữ liệu song song từ đầu đến cuối).
   ---
+
 <!-- Append ADR mới ở dưới. Khi 1 ADR bị superseded, đánh dấu Status + link forward. -->
