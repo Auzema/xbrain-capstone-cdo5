@@ -28,18 +28,18 @@ AIOps owns interpretation + anomaly detection + RCA + confidence + payload gener
 
 ## 2. Infra non-functional requirements
 
-|NFR|Target|Justification|
-|---|---|---|
-|Multi-tenant scale|≥ 50 tenant|Production target của đề bài; dữ liệu observability phải gắn `tenant_id` để tránh leak giữa tenant.|
-|SLO p99 latency|< 1000ms cho AI API response path|Theo AI API contract; triage response cần đủ nhanh để hỗ trợ on-call.|
-|Availability|≥ 99.5%|Subscription SLA; incident triage pipeline không được chết âm thầm khi có alert quan trọng.|
-|Error rate|< 0.5% cho triage API/integration path|Customer trust; lỗi trong pipeline có thể làm mất hoặc chậm xử lý incident.|
-|Cost per tenant/month|TBD trong `05_cost_analysis.md`|Chưa có số thật trước khi build. CDO-05 sẽ đo sau khi có EKS/observability stack và traffic demo.|
-|Onboarding SLA|< 30 min / tenant|Tenant mới cần có namespace/label/metadata/query scope nhanh để sales/demo không bị chậm.|
-|Security baseline|IAM least-privilege + audit 90d|Compliance và tenant isolation; mọi query observability phải bounded theo tenant/service/env/window.|
-|Observability retention|Demo: 7–14 ngày; Audit: 90 ngày metadata|Giữ đủ dữ liệu cho RCA/evidence nhưng tránh cost cao do raw log/metric retention dài.|
-|Data contract completeness|100% log/metric có `tenant_id`, `service`, `env`, `timestamp`, `signal_type`|Nếu thiếu metadata, AIOps không thể query/analyze đúng phạm vi.|
-|No auto-remediation|100% human-reviewed|TF1 chỉ triage/RCA/suggested actions, không tự sửa hệ thống.|
+| NFR                        | Target                                                                       | Justification                                                                                        |
+| -------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Multi-tenant scale         | ≥ 50 tenant                                                                  | Production target của đề bài; dữ liệu observability phải gắn `tenant_id` để tránh leak giữa tenant.  |
+| SLO p99 latency            | < 1000ms cho AI API response path                                            | Theo AI API contract; triage response cần đủ nhanh để hỗ trợ on-call.                                |
+| Availability               | ≥ 99.5%                                                                      | Subscription SLA; incident triage pipeline không được chết âm thầm khi có alert quan trọng.          |
+| Error rate                 | < 0.5% cho triage API/integration path                                       | Customer trust; lỗi trong pipeline có thể làm mất hoặc chậm xử lý incident.                          |
+| Cost per tenant/month      | TBD trong `05_cost_analysis.md`                                              | Chưa có số thật trước khi build. CDO-05 sẽ đo sau khi có EKS/observability stack và traffic demo.    |
+| Onboarding SLA             | < 30 min / tenant                                                            | Tenant mới cần có namespace/label/metadata/query scope nhanh để sales/demo không bị chậm.            |
+| Security baseline          | IAM least-privilege + audit 90d                                              | Compliance và tenant isolation; mọi query observability phải bounded theo tenant/service/env/window. |
+| Observability retention    | Demo: 7–14 ngày; Audit: 90 ngày metadata                                     | Giữ đủ dữ liệu cho RCA/evidence nhưng tránh cost cao do raw log/metric retention dài.                |
+| Data contract completeness | 100% log/metric có `tenant_id`, `service`, `env`, `timestamp`, `signal_type` | Nếu thiếu metadata, AIOps không thể query/analyze đúng phạm vi.                                      |
+| No auto-remediation        | 100% human-reviewed                                                          | TF1 chỉ triage/RCA/suggested actions, không tự sửa hệ thống.                                         |
 
 ---
 
@@ -185,11 +185,8 @@ Ecosystem + Observability + Production Realism
 ```
 
 - **Ecosystem:** tận dụng Prometheus stack, Alertmanager, Argo CD, AWS Load Balancer Controller, RBAC, NetworkPolicy, namespace/label/annotation.
-    
 - **Observability:** metric/log dễ gắn với tenant, service, env, namespace, pod, endpoint và timestamp.
-    
 - **Production realism:** mô hình sát production microservice hơn, phù hợp để demo incident triage end-to-end.
-    
 
 ---
 
@@ -271,31 +268,18 @@ alert rule
 ## 5. Constraints
 
 - **AWS only:** không multi-cloud trong phase này.
-    
 - **Region:** `ap-southeast-1` mặc định. Có thể đổi nếu task force thống nhất region khác, nhưng nên giữ cùng region giữa CDO và AI để giảm network/cost/latency.
-    
 - **Budget:** dự kiến `$100–150 / 2 tuần build` cho môi trường demo. Số chính thức sẽ cập nhật trong `05_cost_analysis.md`.
-    
 - **Code freeze:** T4 W12 18h.
-    
 - **Scope:** không build production-grade platform đầy đủ; chỉ build đủ để chứng minh flow TF1 end-to-end.
-    
 - **AI boundary:** LLM/Bedrock không được query trực tiếp Prometheus/CloudWatch/Loki/Kubernetes API.
-    
 - **AIOps query boundary:** AIOps backend chỉ được query dữ liệu bounded theo `tenant_id`, `service`, `env`, `time_window`.
-    
 - **Data constraint:** metric/log phải có metadata tối thiểu: `schema_version`, `tenant_id`, `service`, `env`, `timestamp`, `signal_type`.
-    
 - **Storage boundary:** metrics nằm trong Prometheus/Prometheus-compatible backend; logs nằm trong CloudWatch Logs hoặc Loki. DynamoDB chỉ lưu incident state/idempotency. Audit evidence để TBD, ưu tiên S3 nếu cần lưu context/evidence package và AI response.
-    
 - **No raw observability DB:** không tạo database riêng để dump toàn bộ raw metric/log, vì sẽ tăng cost và duplicate dữ liệu đã có trong observability backend.
-    
 - **Security:** không hardcode secret Jira/Slack/AI key. Secret phải đi qua cơ chế an toàn như Secrets Manager, SSM Parameter Store, Kubernetes Secret hoặc External Secrets.
-    
 - **Reliability:** incident event không được mất âm thầm; cần retry, audit, incident state, idempotency key và failure handling.
-    
 - **No auto-remediation:** AI chỉ trả RCA, confidence, evidence, suggested actions, Jira payload và Slack payload. Human/operator vẫn là bên review và quyết định hành động.
-    
 
 End-to-end scope cần chứng minh:
 
@@ -328,54 +312,47 @@ Audit evidence
 → TBD, ưu tiên S3 nếu cần lưu context/evidence package và AI response
 ```
 
-|Thành phần|Vai trò|
-|---|---|
-|Prometheus / Prometheus-compatible backend|Lưu và query metrics như request rate, latency, error rate, pod restart, resource usage.|
-|CloudWatch Logs / Loki|Lưu logs của app, container, pipeline hoặc error pattern.|
-|DynamoDB|Lưu trạng thái xử lý incident như `RECEIVED`, `AI_ANALYZED`, `JIRA_CREATED`, `SLACK_SENT`, `FAILED`. Đồng thời dùng cho idempotency để tránh tạo ticket/message trùng.|
-|S3|Có thể dùng để lưu audit evidence dài hơn như alert payload, context/evidence package đã dùng cho RCA, AI response, Jira/Slack payload. Phần này để TBD nếu chưa chốt.|
+| Thành phần                                 | Vai trò                                                                                                                                                                |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prometheus / Prometheus-compatible backend | Lưu và query metrics như request rate, latency, error rate, pod restart, resource usage.                                                                               |
+| CloudWatch Logs / Loki                     | Lưu logs của app, container, pipeline hoặc error pattern.                                                                                                              |
+| DynamoDB                                   | Lưu trạng thái xử lý incident như `RECEIVED`, `AI_ANALYZED`, `JIRA_CREATED`, `SLACK_SENT`, `FAILED`. Đồng thời dùng cho idempotency để tránh tạo ticket/message trùng. |
+| S3                                         | Có thể dùng để lưu audit evidence dài hơn như alert payload, context/evidence package đã dùng cho RCA, AI response, Jira/Slack payload. Phần này để TBD nếu chưa chốt. |
 
 ---
 
 ## 6. Open questions
 
--  **Q1: AI/AIOps cần raw data mức nào?**  
-    Các option: raw log/metric đã chuẩn hóa cơ bản, window summary, hoặc hybrid.  
-    CDO-05 đề xuất: **raw bounded data có schema chuẩn**. CDO đảm bảo dữ liệu có đủ `tenant_id`, `service`, `env`, `timestamp`, `signal_type`; AIOps tự normalize sâu hơn, window, baseline, trend, evidence và RCA.  
-    _To resolve with Nhóm AI by T4 W11._
-    
--  **Q2: AI/AIOps sẽ query trực tiếp observability backend hay thông qua bounded query/export API?**  
-    Option A: AIOps query trực tiếp Prometheus/Loki/CloudWatch với quyền giới hạn.  
-    Option B: CDO expose một bounded query/export API để AIOps gọi.  
-    Rule bắt buộc: không query unbounded toàn hệ thống, không cho LLM/Bedrock query trực tiếp.  
-    _To resolve with Nhóm AI by T4 W11._
-    
--  **Q3: Metadata bắt buộc cuối cùng gồm những field nào?**  
-    Đề xuất tối thiểu: `schema_version`, `tenant_id`, `env`, `service`, `timestamp`, `signal_type`.  
-    Đề xuất mở rộng cho log: `level`, `endpoint`, `method`, `status_code`, `latency_ms`, `message`, `error_type`, `trace_id`, `request_id`, `pod_name`, `namespace`.  
-    Đề xuất mở rộng cho metric: `metric_name`, `value`, `unit`, `window`, `labels`.  
-    Đề xuất mở rộng cho deploy metadata: `version`, `image`, `commit_sha`, `deployed_at`, `deployed_by`, `status`.  
-    _To resolve with Nhóm AI by T4 W11._
-    
--  **Q4: Window mặc định cho query là bao nhiêu?**  
-    Đề xuất: current window `last_5m` hoặc `last_10m`, baseline window `last_1h`, recent deploy window `last_15m` hoặc `last_30m`.  
-    Cần AI confirm vì window ảnh hưởng trực tiếp tới RCA và cost query.  
-    _To resolve with Nhóm AI by T4 W11._
-    
--  **Q5: Jira/Slack ai gửi thật?**  
-    CDO-05 đề xuất: AI trả `jira_payload` và `slack_payload`; CDO/integration layer gửi Jira/Slack thật.  
-    Lý do: AI không cần giữ secret Jira/Slack, dễ retry, dễ audit, dễ tránh gửi trùng và boundary rõ hơn.  
-    _To resolve with Nhóm AI by T4 W11._
-    
--  **Q6: Ba incident scenario demo chính là gì?**  
-    Đề xuất 3 scenario: latency spike, 5xx spike, Redis/dependency timeout.  
-    Mỗi scenario cần có sample metric, sample log, alert condition, expected RCA, expected confidence behavior và expected Jira/Slack payload.  
-    _To resolve with Nhóm AI by T4 W11._
-    
--  **Q7: Audit evidence lưu ở đâu?**  
-    Metrics sẽ nằm trong Prometheus/Prometheus-compatible backend, logs nằm trong CloudWatch Logs hoặc Loki, DynamoDB chỉ lưu incident state/idempotency. Phần audit evidence như alert payload, context/evidence package, AI response, Jira/Slack payload cần chốt lưu ở S3 hay audit store khác. CDO-05 đề xuất ưu tiên S3 nếu cần lưu payload dài hạn.  
-    _To resolve with Nhóm CDO by T4 W11._
-    
+- **Q1: AI/AIOps cần raw data mức nào?**  
+   Các option: raw log/metric đã chuẩn hóa cơ bản, window summary, hoặc hybrid.  
+   CDO-05 đề xuất: **raw bounded data có schema chuẩn**. CDO đảm bảo dữ liệu có đủ `tenant_id`, `service`, `env`, `timestamp`, `signal_type`; AIOps tự normalize sâu hơn, window, baseline, trend, evidence và RCA.  
+   _To resolve with Nhóm AI by T4 W11._
+- **Q2: AI/AIOps sẽ query trực tiếp observability backend hay thông qua bounded query/export API?**  
+   Option A: AIOps query trực tiếp Prometheus/Loki/CloudWatch với quyền giới hạn.  
+   Option B: CDO expose một bounded query/export API để AIOps gọi.  
+   Rule bắt buộc: không query unbounded toàn hệ thống, không cho LLM/Bedrock query trực tiếp.  
+   _To resolve with Nhóm AI by T4 W11._
+- **Q3: Metadata bắt buộc cuối cùng gồm những field nào?**  
+   Đề xuất tối thiểu: `schema_version`, `tenant_id`, `env`, `service`, `timestamp`, `signal_type`.  
+   Đề xuất mở rộng cho log: `level`, `endpoint`, `method`, `status_code`, `latency_ms`, `message`, `error_type`, `trace_id`, `request_id`, `pod_name`, `namespace`.  
+   Đề xuất mở rộng cho metric: `metric_name`, `value`, `unit`, `window`, `labels`.  
+   Đề xuất mở rộng cho deploy metadata: `version`, `image`, `commit_sha`, `deployed_at`, `deployed_by`, `status`.  
+   _To resolve with Nhóm AI by T4 W11._
+- **Q4: Window mặc định cho query là bao nhiêu?**  
+   Đề xuất: current window `last_5m` hoặc `last_10m`, baseline window `last_1h`, recent deploy window `last_15m` hoặc `last_30m`.  
+   Cần AI confirm vì window ảnh hưởng trực tiếp tới RCA và cost query.  
+   _To resolve with Nhóm AI by T4 W11._
+- **Q5: Jira/Slack ai gửi thật?**  
+   CDO-05 đề xuất: AI trả `jira_payload` và `slack_payload`; CDO/integration layer gửi Jira/Slack thật.  
+   Lý do: AI không cần giữ secret Jira/Slack, dễ retry, dễ audit, dễ tránh gửi trùng và boundary rõ hơn.  
+   _To resolve with Nhóm AI by T4 W11._
+- **Q6: Ba incident scenario demo chính là gì?**  
+   Đề xuất 3 scenario: latency spike, 5xx spike, Redis/dependency timeout.  
+   Mỗi scenario cần có sample metric, sample log, alert condition, expected RCA, expected confidence behavior và expected Jira/Slack payload.  
+   _To resolve with Nhóm AI by T4 W11._
+- **Q7: Audit evidence lưu ở đâu?**  
+   Metrics sẽ nằm trong Prometheus/Prometheus-compatible backend, logs nằm trong CloudWatch Logs hoặc Loki, DynamoDB chỉ lưu incident state/idempotency. Phần audit evidence như alert payload, context/evidence package, AI response, Jira/Slack payload cần chốt lưu ở S3 hay audit store khác. CDO-05 đề xuất ưu tiên S3 nếu cần lưu payload dài hạn.  
+   _To resolve with Nhóm CDO by T4 W11._
 
 ---
 
