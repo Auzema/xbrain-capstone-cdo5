@@ -1,23 +1,7 @@
-<!-- Doc owner: <Nhóm CDO-05>
-     Status: Ongoing log W11-W12
-     Format: 1 ADR per major decision. Append-only - không xóa ADR cũ. --># Architecture Decision Records — Task Force 1 · CDO-05
-
-<!-- Doc owner: CDO-05
-     Status: Ongoing log W11-W12
-     Format: 1 ADR per major decision. Append-only — không xóa ADR cũ. -->
-
-> **ADR là gì**: Architecture Decision Record. File log mỗi quyết định kiến trúc quan trọng + lý do tại sao chọn cái đó (chứ không phải mấy phương án khác). Mục đích: 6 tháng sau quay lại codebase vẫn nhớ "à hồi đó chọn X vì Y, không phải vì tôi thích".
->
-> **Khi nào viết ADR**:
-> - Decision có **trade-off thật** (chọn X có cost, chọn Y có benefit).
-> - Decision **reversal cost cao** (vd đổi compute target = rebuild infra).
-> - Decision có thể bị hỏi "sao chọn vậy?" trong Individual Defense buổi chấm.
->
-> **KHÔNG cần ADR cho**: chuyện nhỏ không có trade-off (tên resource, naming convention, vv).
->
-> **Khi 1 ADR cũ không còn áp dụng**: đánh dấu `Status: Superseded by ADR-NNN`, KHÔNG xóa ADR cũ. Append-only.
+# Architecture Decision Records — TF1 · CDO-05
 
 **Target**: ≥3 ADR cho Pack #1 (W11) · ≥5 ADR cho Pack #2 (W12).
+*Quy tắc*: Ghi nhận 1 ADR cho mỗi quyết định kiến trúc lớn có trade-off thực tế và chi phí thay đổi cao.
 
 ---
 
@@ -31,28 +15,30 @@
 | ADR-004 | Observability stack — Prometheus + Loki + CloudWatch | Proposed | — |
 | ADR-005 | Security baseline — IAM least-privilege + Secrets Manager | Proposed | — |
 | ADR-006 | Cost trade-off — On-demand vs Reserved cho demo | Proposed | — |
-| ADR-007 | Alert Event Pipeline — SQS FIFO + DynamoDB/S3 cho Alert Event Pipeline | Accepted | 2026-06-24 |
+| ADR-007 | Alert Event Pipeline — SQS FIFO + DynamoDB/S3 | Accepted | 2026-06-24 |
+
 ---
 
 ## ADR-001 — EKS over ECS / Lambda for compute layer
 
 - **Status**: Accepted
 - **Date**: 2026-06-24
-- **Context**: TF1 Triage Hub cần chạy đồng thời nhiều thành phần: Demo App, AIOps Backend, TF1 AI Engine API, Observability Stack (Prometheus, Grafana, Loki, OTel Collector). Các thành phần này cần chạy liên tục để sẵn sàng xử lý alert bất kỳ lúc nào và cần metadata model nhất quán xuyên suốt từ workload đến metric, log, alert và deployment state. CDO-05 cần chọn một compute platform phù hợp để host toàn bộ stack này trong thời gian build W11-W12.
-- **Decision**: Chọn **EKS (Elastic Kubernetes Service)** làm core compute platform. Toàn bộ app workload, AIOps Backend, AI Engine, và Observability Stack đều chạy trên cùng một EKS cluster. ECS Fargate có thể dùng phụ trợ cho các scheduled task nhỏ nếu cần, gom vào cùng cluster để giảm operational cost.
+- **Context**: 
+  Dự án **TF1 Triage Hub** yêu cầu xây dựng một nền tảng vận hành sự cố thông minh (**AIOps Incident Triage Platform**) để hiện thực hóa góc tiếp cận khác biệt (*Differentiation Angle*): *"Reliable Incident Triage Pipeline with Alert Storm Control and AI Call Gating"*. Hệ thống đòi hỏi một **mô hình siêu dữ liệu nhất quán (workload metadata consistency)** chạy xuyên suốt từ luồng runtime cho tới logs, metrics, alerts và lịch sử deployment nhằm cung cấp đầy đủ ngữ cảnh cho AI Engine phân tích nguyên nhân gốc rễ (RCA) theo từng khung thời gian sự cố.
+  
+- **Decision**: 
+  Chọn **Amazon EKS (Elastic Kubernetes Service)** làm nền tảng tính toán cốt lõi. Toàn bộ các cấu phần bao gồm: Demo App workloads, CDO Incident Correlator Worker, AI Engine API, và observability stack (Prometheus, Loki, Grafana, Alertmanager) đều chạy đồng bộ trên cùng một EKS cluster.
+  
 - **Consequence**:
-  - ✅ Kubernetes ecosystem cung cấp metadata model nhất quán: `tenant_id`, `service`, `env`, `namespace`, `deployment`, `version`, `pod` dùng xuyên suốt từ workload đến metric/log/alert/deployment state — giúp AIOps build RCA context đầy đủ hơn.
-  - ✅ Prometheus Operator, ServiceMonitor, PrometheusRule, Alertmanager tích hợp tự nhiên trong K8s — observability gần workload hơn, không cần custom glue layer.
-  - ✅ ArgoCD GitOps chạy trong cluster, quản lý deployment và recent change metadata — AIOps có thể dùng deployment event để enrich RCA context.
-  - ✅ RBAC, NetworkPolicy, Namespace cho phép enforce tenant isolation và bounded query access ở tầng platform.
-  - ✅ Team CDO-05 đã học K8s trong W10 (RBAC, OPA, ArgoCD, Prometheus stack) — không cần học thêm, áp dụng trực tiếp kiến thức đã có.
-  - ⚠️ Baseline cost cao hơn ECS/Lambda vì EKS cluster và node group luôn chạy dù không có alert. Chi phí cluster tối thiểu khoảng $70–100/tháng.
-  - ⚠️ Operational complexity cao hơn: cần quản lý node group, ingress controller, RBAC, NetworkPolicy, monitoring stack, GitOps. Phù hợp vì team đã quen, nhưng thời gian setup W11 sẽ tốn hơn so với managed services.
-  - ⚠️ Không có cold start như Lambda, nhưng node scale-out khi alert spike có thể mất 2–3 phút nếu cần thêm node mới — cần pre-warm đủ capacity cho demo.
+  - ✅ **Đồng bộ siêu dữ liệu tuyệt đối**: Siêu dữ liệu `tenant_id`, `service`, `env`, `namespace`, `deployment`, `version`, `pod` đi liền mạch từ: K8s Workloads $\rightarrow$ Prometheus $\rightarrow$ Loki $\rightarrow$ Alertmanager $\rightarrow$ ArgoCD $\rightarrow$ Correlator State $\rightarrow$ AI Engine, giúp AI phân tích ngữ cảnh chính xác, ngăn rò rỉ dữ liệu chéo giữa các tenant.
+  - ✅ **Hệ sinh thái Observability & GitOps native**: Tích hợp tự nhiên Prometheus Operator và ArgoCD GitOps trong cluster giúp thu thập metrics/logs sát sườn workloads và lưu vết lịch sử deployment làm bằng chứng chẩn đoán RCA.
+  - ✅ **Ranh giới bảo mật mạnh mẽ**: Sử dụng Namespace, NetworkPolicy, ServiceAccount, và IRSA/Pod Identity để phân quyền tối giản (least privilege) và thiết lập vùng truy cập giới hạn (bounded query access) cho AI Engine.
+  - ⚠️ **Chi phí cố định và độ phức tạp cao**: Cần duy trì EKS control plane và node group liên tục (~$70–100/tháng) và đòi hỏi kỹ năng vận hành K8s (RBAC, Ingress, NetworkPolicy). Đổi lại, hệ thống có khả năng lọc nhiễu tốt (alert storm control), giúp giảm tần suất gọi LLM đắt đỏ.
+
 - **Alternatives considered**:
-  - **AWS Lambda + API Gateway (Serverless-first)**: Chi phí thấp hơn (pay-per-invocation), không cần manage cluster, scale tự động. Bị loại vì cold start 1–3s ảnh hưởng p99 latency của alert path; khó gom K8s deployment metadata vào RCA context; observability stack không thể chạy serverless hoàn toàn. Phù hợp hơn cho CDO angle khác trong cùng TF1.
-  - **ECS Fargate standalone**: Đơn giản hơn EKS, không cần manage control plane, cost thấp hơn. Bị loại vì thiếu Kubernetes ecosystem (Prometheus Operator, ServiceMonitor, PrometheusRule, ArgoCD, NetworkPolicy, Namespace isolation) — phải build nhiều custom glue layer hơn để đạt cùng mức metadata consistency cho AIOps RCA.
-  - **EC2 self-managed**: Kiểm soát tối đa nhưng operational overhead quá cao cho thời gian build W11-W12. Bị loại ngay.
+  - *AWS Lambda (Serverless-first)*: Bị loại vì Lambda chỉ phù hợp tác vụ ngắn hạn. Hệ thống cần chạy các thành phần dài hạn như demo app, worker và observability stack. Dùng Lambda gây phân mảnh siêu dữ liệu (metadata fragmentation), khiến AI khó gom đủ ngữ cảnh RCA.
+  - *ECS Fargate*: Bị loại vì siêu dữ liệu trên ECS bị phân mảnh ở nhiều nơi (ECS Task, CloudWatch, EventBridge, ALB, Tags). CDO sẽ phải viết rất nhiều mã nguồn tùy biến (glue logic) để chắp vá dữ liệu, trong khi EKS cung cấp hệ sinh thái này hoàn toàn tự nhiên.
+  - *EC2 self-managed*: Bị loại ngay lập tức do chi phí quản trị và vận hành hạ tầng quá lớn.
 
 ---
 
@@ -60,8 +46,12 @@
 
 - **Status**: Accepted
 - **Date**: 2026-06-24
-- **Context**: TF1 Triage Hub cần lưu trạng thái xử lý từng incident (`RECEIVED`, `AI_ANALYZED`, `JIRA_CREATED`, `SLACK_SENT`, `FAILED`) và đảm bảo idempotency để tránh tạo ticket Jira hoặc gửi Slack message trùng khi có retry. Ngoài ra cần query nhanh theo `tenant_id` và `timestamp` để audit trail. Metric và log không được lưu vào database riêng — chỉ lưu trong Prometheus và CloudWatch Logs/Loki tương ứng.
-- **Decision**: Chọn **DynamoDB on-demand** làm storage cho incident state và idempotency. Schema: `incident_id` (hash key) + `timestamp` (range key). Global Secondary Index (GSI) theo `tenant_id` + `timestamp` để query audit theo tenant. TTL 90 ngày cho audit record. S3 dùng để lưu audit evidence dài hạn (alert payload, context/evidence package, AI response, Jira/Slack payload) nếu cần — phần này TBD.
+- **Context**: 
+  Hệ thống cần lưu trạng thái xử lý từng incident (`RECEIVED`, `AI_ANALYZED`, `JIRA_CREATED`, `SLACK_SENT`, `FAILED`) và đảm bảo tính idempotency (chống trùng lặp) để tránh tạo ticket Jira hoặc gửi Slack trùng khi có cơ chế retry. Đồng thời cần truy vấn nhanh theo `tenant_id` và `timestamp` để kiểm toán (audit trail) mà không lưu trữ log/metric thô.
+  
+- **Decision**: 
+  Chọn **DynamoDB on-demand** làm kho lưu trữ trạng thái incident và idempotency. Schema: `incident_id` (hash key) + `timestamp` (range key). Sử dụng Global Secondary Index (GSI) theo `tenant_id` + `timestamp` để phục vụ kiểm toán và bật tính năng TTL 90 ngày để tự động dọn dẹp dữ liệu cũ.
+  
 - **Consequence**:
   - ✅ Serverless, không cần manage database server trong khi đã có EKS cluster cần quản lý — tránh thêm operational overhead.
   - ✅ On-demand billing phù hợp với workload alert-driven không liên tục — chỉ tốn tiền khi có incident thật.
@@ -71,9 +61,9 @@
   - ⚠️ Không có complex SQL query — chỉ query theo key/GSI. Đủ cho use case audit trail đơn giản của TF1, nhưng nếu cần analytics phức tạp sau này phải export sang S3 + Athena.
   - ⚠️ Hot partition nếu nhiều incident cùng `tenant_id` trong thời gian ngắn — mitigate bằng `incident_id` là UUID random làm hash key, tránh partition skew.
 - **Alternatives considered**:
-  - **RDS PostgreSQL**: Full SQL, dễ query phức tạp, audit report linh hoạt hơn. Bị loại vì cần manage RDS instance — thêm operational overhead khi đã có EKS. Cost cao hơn DynamoDB on-demand cho workload thưa. Overkill cho use case incident state + idempotency đơn giản.
-  - **S3 + Athena**: Chi phí thấp nhất cho storage dài hạn, query bằng SQL qua Athena. Bị loại vì Athena query latency cao (vài giây), không phù hợp cho idempotency check real-time khi xử lý incident. S3 vẫn được dùng phụ trợ cho audit evidence dài hạn.
-  - **Redis / ElastiCache**: Latency thấp nhất cho idempotency check. Bị loại vì không có persistence tốt, TTL management phức tạp hơn DynamoDB, thêm một managed service nữa cần setup và monitor.
+  - *RDS PostgreSQL*: Bị loại vì tốn công quản trị và chi phí chạy instance cố định quá cao cho workload thưa thớt của demo.
+  - *S3 + Athena*: Bị loại vì Athena có độ trễ truy vấn cao (vài giây), không đáp ứng được yêu cầu kiểm tra trùng lặp thời gian thực khi xử lý alert.
+  - *Redis / ElastiCache*: Bị loại vì quản lý persistence phức tạp và tốn thêm chi phí duy trì cụm cache.
 
 ---
 
@@ -81,23 +71,22 @@
 
 - **Status**: Accepted
 - **Date**: 2026-06-24
-- **Context**: CDO-05 cần một CI/CD pipeline để build container image, chạy test, scan security và deploy lên EKS cluster. Cần phân biệt rõ hai phần: CI (build/test/scan) và CD (deploy lên K8s). Pipeline phải hỗ trợ GitOps để đảm bảo trạng thái cluster luôn sync với Git, có rollback nhanh khi cần và drift detection.
-- **Decision**: Chọn **AWS CodePipeline** cho phần CI (build + test + scan + push image lên ECR) và **ArgoCD** cho phần CD (GitOps deploy lên EKS). Hai công cụ đảm nhận vai trò tách biệt: CodePipeline lo phần build pipeline; ArgoCD lo phần sync K8s manifest từ Git vào cluster. Deploy strategy: **canary** — 10% traffic trước, quan sát error rate và latency, sau đó tăng lên 50% rồi 100%.
+- **Context**: 
+  Cần xây dựng quy trình tự động hóa CI/CD để build container, chạy test, quét bảo mật và deploy lên EKS. Quy trình phải tuân thủ nguyên tắc GitOps (trạng thái cluster đồng bộ với Git), hỗ trợ rollback tức thì và giảm thiểu rủi ro khi deploy phiên bản mới (bad deployment).
+  
+- **Decision**: 
+  Chọn **AWS CodePipeline cho CI** (build, test, scan, push image lên ECR) và **ArgoCD cho CD** (GitOps deploy lên EKS). Chiến lược triển khai ứng dụng: **Canary Deployment** (10% $\rightarrow$ 50% $\rightarrow$ 100% traffic) sử dụng **Argo Rollouts** cho AI Engine.
+  
 - **Consequence**:
-  - ✅ Phân tách rõ CI và CD — CodePipeline không cần biết cluster kubeconfig, ArgoCD không cần biết build logic. Boundary sạch, dễ debug.
-  - ✅ ArgoCD đã học trong W10, team quen cách dùng — không mất thời gian học mới trong W11-W12.
-  - ✅ GitOps với ArgoCD đảm bảo cluster state luôn có source of truth trong Git — rollback chỉ cần revert Git commit, ArgoCD tự sync.
-  - ✅ ArgoCD drift detection tự phát hiện khi cluster state lệch khỏi Git — daily drift report về Slack.
-  - ✅ Canary deploy giảm blast radius khi deploy có lỗi — error rate > 1% hoặc p99 latency > 800ms thì auto-abort và rollback.
-  - ✅ CodePipeline native với AWS ecosystem — dễ integrate ECR, Secrets Manager, IAM OIDC trong cùng account.
-  - ⚠️ CodePipeline có less flexibility hơn GitHub Actions cho custom workflow — nhưng đủ cho build/test/scan/push standard pipeline của TF1.
-  - ⚠️ ArgoCD cần thêm một workload trong cluster — tốn resource nhỏ (~200MB RAM) nhưng không đáng kể.
-  - ⚠️ Canary deploy phức tạp hơn rolling update — cần Argo Rollouts hoặc Ingress weight config. Trade-off chấp nhận được vì team đã học Argo Rollouts trong W9.
+  - ✅ **Phân tách rõ ràng CI/CD**: CodePipeline không cần biết thông tin EKS cluster, ArgoCD tự động đồng bộ từ Git. Ranh giới bảo mật sạch sẽ.
+  - ✅ **Ngăn ngừa lỗi triển khai**: Argo Rollouts tự động phân tích metrics (error rate > 1% hoặc latency > 800ms) để tự động dừng và rollback Canary (< 30 giây), giảm thiểu tối đa vùng ảnh hưởng lỗi (blast radius).
+  - ✅ **Tự động đồng bộ và Self-healing**: ArgoCD tự động phát hiện sai lệch (drift) giữa cluster và Git, tự động đưa cluster về trạng thái chuẩn trong Git.
+  - ⚠️ **Độ phức tạp tăng**: Cấu hình Canary (Argo Rollouts, Ingress weight) phức tạp hơn Rolling Update tiêu chuẩn và tiêu tốn một lượng nhỏ tài nguyên trong EKS cho ArgoCD Controller.
+
 - **Alternatives considered**:
-  - **GitHub Actions (CI) + ArgoCD (CD)**: GitHub Actions linh hoạt hơn CodePipeline, marketplace action phong phú. Bị loại vì cần thêm GitHub secret để access AWS — thêm credential surface. CodePipeline dùng IAM OIDC native hơn trong AWS ecosystem của TF1.
-  - **CodePipeline + Flux (thay ArgoCD)**: Flux cũng là GitOps tool tốt. Bị loại vì team đã học ArgoCD trong W10, chuyển sang Flux mất thêm thời gian học trong W11-W12.
-  - **CodePipeline all-in (CI + CD)**: CodePipeline có thể deploy thẳng lên EKS qua EKS deploy action. Bị loại vì không có GitOps, không có drift detection, rollback phức tạp hơn — mất các lợi ích của GitOps model.
-  - **Blue-green deploy (thay Canary)**: Blue-green đơn giản hơn canary — chỉ cần switch ALB target group. Bị loại vì cần chạy double resource (blue + green) cùng lúc — tốn cost trong demo budget $100–150. Canary tiết kiệm hơn, chỉ tăng traffic dần.
+  - *GitHub Actions + ArgoCD*: Tốt, nhưng CodePipeline tận dụng tốt hơn cơ chế IAM OIDC native trong hệ sinh thái AWS của dự án.
+  - *CodePipeline all-in (không dùng ArgoCD)*: Bị loại vì thiếu tính năng GitOps, tự động phát hiện drift và cơ chế tự động rollback của Argo Rollouts.
+  - *Blue-Green Deployment*: Bị loại vì yêu cầu chạy song song gấp đôi tài nguyên (Blue và Green), vượt quá ngân sách demo ($100–150).
 
 ---
 
@@ -105,10 +94,10 @@
 
 - **Status**: Proposed
 - **Date**: —
-- **Context**: <!-- Cần điền sau khi team confirm stack observability cụ thể -->
-- **Decision**: <!-- TBD -->
-- **Consequence**: <!-- TBD -->
-- **Alternatives considered**: <!-- TBD -->
+- **Context**: Xác định giải pháp giám sát tập trung cho EKS workload và hạ tầng AWS.
+- **Decision**: *TBD*
+- **Consequence**: *TBD*
+- **Alternatives considered**: *TBD*
 
 ---
 
@@ -116,10 +105,10 @@
 
 - **Status**: Proposed
 - **Date**: —
-- **Context**: <!-- Cần điền sau khi Thắng confirm security design -->
-- **Decision**: <!-- TBD -->
-- **Consequence**: <!-- TBD -->
-- **Alternatives considered**: <!-- TBD -->
+- **Context**: Thiết lập ranh giới bảo mật cho các pod truy cập tài nguyên AWS và quản lý thông tin nhạy cảm.
+- **Decision**: *TBD*
+- **Consequence**: *TBD*
+- **Alternatives considered**: *TBD*
 
 ---
 
@@ -127,32 +116,30 @@
 
 - **Status**: Proposed
 - **Date**: —
-- **Context**: <!-- Cần điền sau khi có số thật từ 05_cost_analysis.md -->
-- **Decision**: <!-- TBD -->
-- **Consequence**: <!-- TBD -->
-- **Alternatives considered**: <!-- TBD -->
+- **Context**: Lựa chọn mô hình thanh toán tài nguyên tối ưu nhất trong ngân sách capstone.
+- **Decision**: *TBD*
+- **Consequence**: *TBD*
+- **Alternatives considered**: *TBD*
 
 ---
-## ADR-007 - SQS FIFO and DynamoDB/S3 for Alert Event Pipeline
+
+## ADR-007 — Alert Event Pipeline — SQS FIFO + DynamoDB/S3
 
 - **Status**: Accepted
 - **Date**: 2026-06-24
-- **Context**: Hệ thống **TF1 Triage Hub** cần tiếp nhận các tín hiệu cảnh báo (*Alert/Incident events*) cực kỳ nghiêm trọng từ tầng Giám sát (*Observability stack*). Nếu xảy ra sự cố sập hệ thống xử lý phía sau (*AIOps worker down*) hoặc nghẽn mạng, cơ chế tự động thử lại của Lambda (*Lambda Async Retry*) **không đảm bảo lưu trữ alert lâu dài**, dễ dẫn đến mất mát tín hiệu sinh mệnh (vital alerts) và gây trùng lặp ticket trên Jira/Slack khi có hiện tượng tự động thử lại trùng (retry duplication).
-- **Decision**: Chốt sử dụng mô hình kết hợp **Ingest Lambda**, **SQS FIFO Queue** làm bộ đệm giảm chấn, **Amazon DynamoDB** làm kho lưu trữ trạng thái (**State Store**), và **Amazon S3** làm kho lưu trữ bằng chứng sự cố (**Evidence Store**).
-
+- **Context**: 
+  Tín hiệu cảnh báo từ Observability stack gửi về hệ thống là cực kỳ quan trọng. Nếu xảy ra sự cố nghẽn mạng hoặc worker bị sập, cơ chế *Lambda Async Retry* không đảm bảo lưu trữ alert lâu dài, dễ gây mất cảnh báo sinh mệnh hoặc tạo trùng lặp ticket trên Jira/Slack khi retry.
+  
   ### Luồng xử lý tiêu chuẩn (Standard Pipeline Flow):
   Prometheus/Alertmanager (Webhook) ──► Ingest Lambda ──► SQS FIFO ──► AIOps Worker ──► TF1 AI Engine (Bedrock) ──► DynamoDB & S3 ──► Jira/Slack.
-
+  
 - **Consequence**:
-  - ✅ **Đảm bảo toàn vẹn dữ liệu (Durability)**: Alert không bao giờ bị mất nhờ SQS FIFO lưu trữ tin nhắn tới 14 ngày kết hợp với S3 Audit Store lưu vết sự cố lâu dài.
-  - ✅ **Khử trùng lặp tuyệt đối (Idempotency)**: Khử trùng 5 phút ở đầu vào bằng SQS FIFO và chống trùng lặp vĩnh viễn ở đầu ra thông qua cơ chế kiểm tra `idempotency_key` tại DynamoDB trước khi tạo ticket Jira/Slack.
-  - ✅ **Cô lập lỗi thông minh (Dead Letter Queue - DLQ)**: Tự động tách các alert lỗi format sang SQS DLQ giúp hệ thống không bị nghẽn mạch vô hạn.
-  - ✅ **Khả năng Replay mạnh mẽ**: Dễ dàng phát lại (replay) các alert lỗi từ DLQ về Queue chính sau khi đã vá lỗi ở AIOps Worker mà không cần giả lập lại dữ liệu từ nguồn phát ban đầu.
-  - ⚠️ **Tăng độ phức tạp kiến trúc**: Phải quản lý và cấu hình nhiều cấu phần hạ tầng tích hợp (Ingest Lambda, SQS FIFO, SQS DLQ, DynamoDB State Table, và S3 Audit Store).
-  - ⚠️ **Giới hạn băng thông mặc định**: SQS FIFO bị giới hạn tốc độ mặc định ở mức 300 TPS. Cần chủ động bật tính năng **High Throughput** cho FIFO để nâng giới hạn lên mức **3,000+ TPS** ngay từ đầu nhằm phòng ngừa các đợt bùng nổ cảnh báo lớn (Alert Storm).
-- **Alternatives considered**:
-  - Option A: Chỉ sử dụng cơ chế Lambda Async Retry (rejected because thời gian lưu trữ và số lần thử lại của Lambda quá ngắn (tối đa vài tiếng). Nếu hệ thống AIOps chết qua đêm, alert sẽ bị nuốt mất. Không có hàng đợi rõ ràng, thiếu tính năng cô lập lỗi (DLQ) và cực kỳ khó debug/replay khi có alert lỗi format).
-  - Option B: Chỉ sử dụng SQS Standard Queue (Hàng đợi thường) (rejected because loại hàng đợi thường có cơ chế giao hàng *at-least-once* (có thể gửi trùng message) và không đảm bảo đúng thứ tự. Điều này gây áp lực rất lớn lên tầng code logic của AIOps Worker khi phải tự xử lý bài toán chống trùng dữ liệu song song từ đầu đến cuối).
+  - ✅ **Độ bền vững tuyệt đối (Durability)**: SQS FIFO bảo vệ alert tối đa 14 ngày kể cả khi worker phía sau bị sập, không bao giờ bị mất tín hiệu cảnh báo âm thầm.
+  - ✅ **Khử trùng lặp 2 lớp**: Khử trùng 5 phút ở đầu vào bằng SQS FIFO, chống trùng lặp đầu ra vĩnh viễn bằng cách ghi nhận `idempotency_key` tại DynamoDB trước khi gọi API Jira/Slack.
+  - ✅ **Cô lập lỗi và Replay**: Sử dụng SQS Dead Letter Queue (DLQ) để tự động cô lập các tin nhắn bị lỗi định dạng, hỗ trợ cơ chế phát lại (replay) dễ dàng sau khi sửa lỗi code mà không cần giả lập lại sự cố.
+  - ⚠️ **Tăng độ phức tạp cấu hình**: Phải quản lý nhiều dịch vụ tích hợp.
+  - ⚠️ **Giới hạn băng thông**: SQS FIFO giới hạn mặc định 300 TPS. Cần chủ động kích hoạt tính năng *High Throughput* để nâng giới hạn lên **3.000+ TPS** đề phòng các đợt bùng nổ cảnh báo lớn (Alert Storm).
 
-  ---
-<!-- Append ADR mới ở dưới. Khi 1 ADR bị superseded, đánh dấu Status + link forward. -->
+- **Alternatives considered**:
+  - *Chỉ dùng Lambda Async Retry*: Bị loại vì thời gian lưu trữ quá ngắn (tối đa vài tiếng), dễ nuốt mất tin nhắn khi sập hệ thống và không hỗ trợ DLQ/Replay.
+  - *SQS Standard Queue*: Bị loại vì cơ chế giao hàng *at-least-once* (có thể gửi trùng) và không đảm bảo thứ tự, gây áp lực lớn lên tầng ứng dụng để tự xử lý chống trùng lặp.
