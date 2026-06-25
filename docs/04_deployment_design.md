@@ -40,7 +40,7 @@ infra/
 
 ### 2.1 Pipeline stages
 
-![Overview Pipeline](assets/deployment-overview_pipeline.png)
+![Overview Pipeline](assets/deployment-pipeline-ci-cd.png)
 
 ```text
 PR opened ──► Build ──► Test ──► Scan ──► Plan ──► Review ──► Merge ──► Apply ──► Smoke test
