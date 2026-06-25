@@ -60,7 +60,7 @@ flowchart LR
     DLQ -.metrics.-> CW
 ```
 
-![mermaid](../docs/assets/CDO-05%20Diagram-Page-3.drawio.png)
+![mermaid](../docs/assets/security-mermaid.png)
 
 Caption: public traffic chỉ tới Demo App/Public API qua ALB. AI Engine không public. Metrics/logs nằm ở Prometheus/Loki/CloudWatch, không dump raw vào SQS. TF1 client brief yêu cầu single-region `us-east-1`; nếu CDO-05 demo chạy `ap-southeast-1` theo infra/cost draft hiện tại thì phải ghi rõ là capstone demo deviation và xin mentor/client approve.
 
