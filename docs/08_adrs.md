@@ -131,6 +131,8 @@
   ### Luồng xử lý tiêu chuẩn (Standard Pipeline Flow):
   Prometheus/Alertmanager (Webhook) ──► Ingest Lambda ──► SQS FIFO ──► AIOps Worker ──► TF1 AI Engine (Bedrock) ──► DynamoDB & S3 ──► Jira/Slack.
   
+- **Decision**: Chốt sử dụng mô hình kết hợp **Ingest Lambda**, **SQS FIFO Queue** làm bộ đệm giảm chấn, **Amazon DynamoDB** làm kho lưu trữ trạng thái (**State Store**), và **Amazon S3** làm kho lưu trữ bằng chứng sự cố (**Evidence Store**).
+
 - **Consequence**:
   - ✅ **Độ bền vững tuyệt đối (Durability)**: SQS FIFO bảo vệ alert tối đa 14 ngày kể cả khi worker phía sau bị sập, không bao giờ bị mất tín hiệu cảnh báo âm thầm.
   - ✅ **Khử trùng lặp 2 lớp**: Khử trùng 5 phút ở đầu vào bằng SQS FIFO, chống trùng lặp đầu ra vĩnh viễn bằng cách ghi nhận `idempotency_key` tại DynamoDB trước khi gọi API Jira/Slack.
