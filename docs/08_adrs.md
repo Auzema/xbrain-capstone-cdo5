@@ -31,7 +31,7 @@
 | ADR-004 | Observability stack — Prometheus + Loki + CloudWatch | Proposed | — |
 | ADR-005 | Security baseline — IAM least-privilege + Secrets Manager | Proposed | — |
 | ADR-006 | Cost trade-off — On-demand vs Reserved cho demo | Proposed | — |
-
+| ADR-007 | Alert Event Pipeline — SQS FIFO + DynamoDB/S3 cho Alert Event Pipeline | Accepted | 2026-06-24 |
 ---
 
 ## ADR-001 — EKS over ECS / Lambda for compute layer
@@ -133,5 +133,26 @@
 - **Alternatives considered**: <!-- TBD -->
 
 ---
+## ADR-007 - SQS FIFO and DynamoDB/S3 for Alert Event Pipeline
 
+- **Status**: Accepted
+- **Date**: 2026-06-24
+- **Context**: Hệ thống **TF1 Triage Hub** cần tiếp nhận các tín hiệu cảnh báo (*Alert/Incident events*) cực kỳ nghiêm trọng từ tầng Giám sát (*Observability stack*). Nếu xảy ra sự cố sập hệ thống xử lý phía sau (*AIOps worker down*) hoặc nghẽn mạng, cơ chế tự động thử lại của Lambda (*Lambda Async Retry*) **không đảm bảo lưu trữ alert lâu dài**, dễ dẫn đến mất mát tín hiệu sinh mệnh (vital alerts) và gây trùng lặp ticket trên Jira/Slack khi có hiện tượng tự động thử lại trùng (retry duplication).
+- **Decision**: Chốt sử dụng mô hình kết hợp **Ingest Lambda**, **SQS FIFO Queue** làm bộ đệm giảm chấn, **Amazon DynamoDB** làm kho lưu trữ trạng thái (**State Store**), và **Amazon S3** làm kho lưu trữ bằng chứng sự cố (**Evidence Store**).
+
+  ### Luồng xử lý tiêu chuẩn (Standard Pipeline Flow):
+  Prometheus/Alertmanager (Webhook) ──► Ingest Lambda ──► SQS FIFO ──► AIOps Worker ──► TF1 AI Engine (Bedrock) ──► DynamoDB & S3 ──► Jira/Slack.
+
+- **Consequence**:
+  - ✅ **Đảm bảo toàn vẹn dữ liệu (Durability)**: Alert không bao giờ bị mất nhờ SQS FIFO lưu trữ tin nhắn tới 14 ngày kết hợp với S3 Audit Store lưu vết sự cố lâu dài.
+  - ✅ **Khử trùng lặp tuyệt đối (Idempotency)**: Khử trùng 5 phút ở đầu vào bằng SQS FIFO và chống trùng lặp vĩnh viễn ở đầu ra thông qua cơ chế kiểm tra `idempotency_key` tại DynamoDB trước khi tạo ticket Jira/Slack.
+  - ✅ **Cô lập lỗi thông minh (Dead Letter Queue - DLQ)**: Tự động tách các alert lỗi format sang SQS DLQ giúp hệ thống không bị nghẽn mạch vô hạn.
+  - ✅ **Khả năng Replay mạnh mẽ**: Dễ dàng phát lại (replay) các alert lỗi từ DLQ về Queue chính sau khi đã vá lỗi ở AIOps Worker mà không cần giả lập lại dữ liệu từ nguồn phát ban đầu.
+  - ⚠️ **Tăng độ phức tạp kiến trúc**: Phải quản lý và cấu hình nhiều cấu phần hạ tầng tích hợp (Ingest Lambda, SQS FIFO, SQS DLQ, DynamoDB State Table, và S3 Audit Store).
+  - ⚠️ **Giới hạn băng thông mặc định**: SQS FIFO bị giới hạn tốc độ mặc định ở mức 300 TPS. Cần chủ động bật tính năng **High Throughput** cho FIFO để nâng giới hạn lên mức **3,000+ TPS** ngay từ đầu nhằm phòng ngừa các đợt bùng nổ cảnh báo lớn (Alert Storm).
+- **Alternatives considered**:
+  - Option A: Chỉ sử dụng cơ chế Lambda Async Retry (rejected because thời gian lưu trữ và số lần thử lại của Lambda quá ngắn (tối đa vài tiếng). Nếu hệ thống AIOps chết qua đêm, alert sẽ bị nuốt mất. Không có hàng đợi rõ ràng, thiếu tính năng cô lập lỗi (DLQ) và cực kỳ khó debug/replay khi có alert lỗi format).
+  - Option B: Chỉ sử dụng SQS Standard Queue (Hàng đợi thường) (rejected because loại hàng đợi thường có cơ chế giao hàng *at-least-once* (có thể gửi trùng message) và không đảm bảo đúng thứ tự. Điều này gây áp lực rất lớn lên tầng code logic của AIOps Worker khi phải tự xử lý bài toán chống trùng dữ liệu song song từ đầu đến cuối).
+
+  ---
 <!-- Append ADR mới ở dưới. Khi 1 ADR bị superseded, đánh dấu Status + link forward. -->
