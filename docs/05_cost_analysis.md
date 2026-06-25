@@ -12,22 +12,22 @@ CDO-05 chọn EKS-native angle. Chi phí chia làm 2 loại:
 - **Fixed cost**: cluster EKS, ALB, VPC Interface Endpoints, observability stack — chia đều cho tất cả tenant.
 - **Variable cost**: DynamoDB, SQS, S3, Lambda, CloudWatch — tăng theo số lượng incident/alert thực tế.
 
-| Component | AWS Service | Unit cost (ap-southeast-1) | Tenant avg usage/month | $/tenant/month (50 tenant) |
+| Component | AWS Service | Unit cost (us-east-1) | Tenant avg usage/month | $/tenant/month (50 tenant) |
 |---|---|---|---|---|
 | EKS control plane | EKS | $0.10/hr | Shared / 50 tenant | ~$1.46 |
 | API entry | ALB | ~$0.008/hr + LCU | Shared / 50 tenant | ~$0.12 |
 | Alert ingestion | Lambda (Ingest) | $0.20/1M req | ~500 invocations | ~$0.01 |
 | Event queue | SQS Standard | $0.40/1M msg | ~1000 messages | ~$0.01 |
 | Incident state | DynamoDB on-demand | $1.25/M WCU, $0.25/M RCU | ~5000 WCU, ~10000 RCU | ~$0.01 |
-| Audit storage | S3 Standard | $0.025/GB | ~0.5 GB evidence | ~$0.01 |
+| Audit storage | S3 Standard | $0.023/GB | ~0.5 GB evidence | ~$0.01 |
 | Metrics | Prometheus (in-cluster) | Nằm trong EKS (không tốn thêm) | — | — |
 | Logs | Loki (in-cluster) | Nằm trong EKS (không tốn thêm) | — | — |
-| AWS-side monitoring | CloudWatch Logs | $0.76/GB ingested | ~0.2 GB | ~$0.15 |
+| AWS-side monitoring | CloudWatch Logs | $0.50/GB ingested | ~0.2 GB | ~$0.10 |
 | WAF (optional) | AWS WAF | ~$5/month base + $1/1M req | Shared / 50 tenant | ~$0.10 |
 | VPC Gateway Endpoints | S3, DynamoDB | Miễn phí | Shared / 50 tenant | $0.00 |
 | VPC Interface Endpoints | Secrets Manager, Bedrock | ~$0.01/hr/endpoint/AZ (3 AZs = ~$0.06/hr) | Shared / 50 tenant | ~$0.88 |
 | AI inference | Amazon Bedrock | <!-- TODO: SQ-05 chưa confirm --> | ~50 calls | <!-- TODO --> |
-| **Total / tenant / month (est.)** | | | | **~$2.75 + Bedrock** |
+| **Total / tenant / month (est.)** | | | | **~$2.70 + Bedrock** |
 
 > ⚠️ **TODO (fill W12)**: Bedrock cost chưa có — đang là open question SQ-05 trong `03_security_design.md`: "Bedrock có bật thật không? Model/cost cap là gì?" Cần AIO-01 confirm trước khi điền. Ước tính tạm nếu dùng Claude Haiku: ~$0.25/1M input token × 50 calls × 2000 token/call ≈ $0.025/tenant/month.
 >
