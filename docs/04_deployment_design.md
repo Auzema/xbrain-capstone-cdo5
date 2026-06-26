@@ -108,7 +108,7 @@ PR opened ──► Build ──► Test ──► Scan ──► Plan ──►
 
 | Env     | Purpose                             | Account / Namespace  | Auto-deploy                                   |
 | ------- | ----------------------------------- | -------------------- | --------------------------------------------- |
-| Sandbox | Dev experimentation                 | `triage-hub-sandbox` | On push to `feature/*`, `bugfix/*`            |
+| Sandbox | Dev experimentation                 | `triage-hub-sandbox` | On push to `feat/*`, `bugfix/*`            |
 | Staging | Pre-prod integration                | `triage-hub-staging` | On push to `develop`, `release/*`, `hotfix/*` |
 | Prod    | Real tenant traffic (Demo capstone) | `triage-hub-prod`    | On merge to `main` + manual approval          |
 
@@ -119,7 +119,7 @@ PR opened ──► Build ──► Test ──► Scan ──► Plan ──►
 - Secret scanning trên PR bằng Gitleaks / TruffleHog.
 - Block merge if secret detected.
 
-## 7. Tenant onboarding deployment
+## 7. Tenant onboarding deployment - [DRAFT]
 
 ```text
 1. POST /platform/v1/tenants → trigger Step Function
