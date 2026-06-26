@@ -56,7 +56,7 @@ Fixed cost (EKS control plane, ALB, VPC Interface Endpoints, observability stack
 
 ### Đã áp dụng trong MVP
 
-- ✅ **2 environment thay vì 3** (dev + prod): Tiết kiệm ~$130.80/tháng so với chạy 3 cluster đầy đủ. Dev environment đóng vai trò staging, giảm fixed cost trong budget $100–150 / 2 tuần. (ADR-004 §0.4)
+- ✅ **2 environment thay vì 3** (sandbox + prod): Tiết kiệm ~$130.80/tháng so với chạy 3 cluster đầy đủ. Sandbox environment đóng vai trò staging, giảm fixed cost trong budget $100–150 / 2 tuần. (ADR-004 §0.4)
 - ✅ **DynamoDB on-demand**: Không cần ước lượng provisioned capacity trước — phù hợp với workload alert-driven không đều. Tránh overpay khi idle.
 - ✅ **Prometheus + Loki in-cluster**: Chạy trực tiếp trong cụm EKS — không tốn thêm managed service cost. Dùng lại tài nguyên cụm có sẵn.
 - ✅ **Lambda cho Ingest**: Chỉ tốn tiền khi có alert webhook thật — không chạy liên tục như ECS task.
