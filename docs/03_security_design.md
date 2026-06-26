@@ -255,7 +255,37 @@ VPC endpoints nên dùng cho S3, DynamoDB, SQS, ECR, CloudWatch Logs, STS, Secre
 | Namespace `ai-engine` | Chỉ CDO Worker/Integration Layer nội bộ | Evidence proxy/S3 evidence/Bedrock optional/CloudWatch Logs. |
 | Integration Layer | Internal trigger hoặc queue | Jira/Slack endpoints; DynamoDB/S3/Secrets. |
 
-### 3.3 Kubernetes NetworkPolicy
+### 3.3 Security group baseline
+
+Security Group không phải lớp bảo vệ duy nhất, nhưng là lớp chặn network cấp VPC quan trọng nhất. Rule nên viết theo nguyên tắc allowlist, không mở rộng `0.0.0.0/0` trừ public ALB port 443.
+
+| Security group | Inbound | Outbound | Notes |
+|---|---|---|---|
+| `tf1-public-alb-sg` | `443` từ internet hoặc allowlisted CIDR; optional `80` chỉ redirect sang HTTPS | Chỉ tới EKS node/pod target SG trên app port | Không route tới AI Engine, Prometheus, Loki, Grafana admin hoặc internal service. |
+| `tf1-eks-node-sg` | Từ ALB SG tới NodePort/target port nếu dùng ALB target; từ control plane SG theo EKS requirement; node-to-node nội bộ | VPC endpoints, internal services, required image pull/observability endpoints | Không dùng node SG làm "mở tất cả". Pod-level isolation vẫn cần NetworkPolicy. |
+| `tf1-app-pod-sg` nếu dùng Security Groups for Pods | Từ ALB SG hoặc internal namespace cần thiết | Observability ingest/scrape path; không cần SQS/DynamoDB/S3 trực tiếp nếu app chỉ emit telemetry | Dùng khi muốn cô lập app public khỏi worker/AI namespace ở mức ENI/pod. |
+| `tf1-ai-engine-sg` | Chỉ từ `tf1-aiops-worker-sg` hoặc internal service mesh/ingress SG tới port AI API | Evidence proxy/S3 endpoint/Bedrock endpoint/CloudWatch Logs endpoint | Không có inbound từ internet. Không cho app namespace gọi trực tiếp nếu không phải approved caller. |
+| `tf1-aiops-worker-sg` | Không cần public inbound; optional health/metrics từ observability namespace | SQS endpoint, DynamoDB endpoint, S3 endpoint, Secrets Manager endpoint, AI Engine internal service | Worker là consumer, nên inbound rất hẹp. Quyền AWS vẫn do IRSA quyết định, SG chỉ kiểm soát đường mạng. |
+| `tf1-integration-sg` | Internal trigger hoặc queue consumer only | Jira/Slack qua NAT/egress proxy; DynamoDB/S3/Secrets endpoints | Nếu Jira/Slack public internet, outbound phải đi qua NAT/egress proxy và có retry/rate limit. |
+| `tf1-observability-sg` | Scrape/ingest từ app/workload SG; Grafana UI chỉ từ VPN/admin CIDR nếu expose | Internal storage/backend; CloudWatch/S3 nếu export | Prometheus/Loki/Grafana không public unauthenticated. |
+| `tf1-vpc-endpoint-sg` | `443` từ EKS/Lambda SG cần gọi AWS APIs | AWS service endpoint | Áp dụng cho interface endpoints như SQS, Secrets Manager, CloudWatch Logs, STS, ECR, Bedrock nếu dùng. |
+| `tf1-lambda-sg` nếu Lambda trong VPC | Không cần inbound public | SQS endpoint, DynamoDB endpoint, S3 endpoint, Secrets Manager endpoint | Ingest Lambda nhận event qua Lambda service/API integration; không cần mở inbound trong VPC. |
+
+Rule cụ thể nên được encode bằng Terraform variables/module, ví dụ:
+
+```text
+allow internet -> public ALB:443
+allow public ALB SG -> app target port
+allow aiops worker SG -> ai-engine SG:8080
+allow ai-engine SG -> evidence proxy SG:8080
+allow app/observability SG -> observability scrape/ingest ports
+allow workload SGs -> VPC endpoint SG:443
+deny public -> ai-engine/prometheus/loki/grafana/worker
+```
+
+Không nên rely vào Security Group để enforce tenant isolation một mình. Tenant isolation phải kết hợp `tenant_id` trong payload, query scope, DynamoDB key, S3 prefix, IAM condition, NetworkPolicy và test cross-tenant.
+
+### 3.4 Kubernetes NetworkPolicy
 
 Nếu CNI hỗ trợ NetworkPolicy (AWS VPC CNI network policy, Calico hoặc Cilium), bật default deny cho namespace nhạy cảm:
 
@@ -280,7 +310,42 @@ Inter-tenant communication blocked:
 - Production có thể dùng namespace theo tenant/env hoặc service group nếu tenant isolation cần mạnh.
 - NetworkPolicy không đủ để chống data leak nếu backend query trả sai dữ liệu; phải kết hợp query gateway, DynamoDB key design, S3 prefix, IAM condition và test cross-tenant.
 
-### 3.4 Edge protection: WAF / Shield / ALB
+### 3.5 VPC endpoint and egress policy
+
+Các service AWS nên được gọi qua VPC endpoints khi có thể, nhất là từ private subnets:
+
+| Endpoint | Dùng bởi | Policy direction |
+|---|---|---|
+| SQS endpoint | Ingest Lambda, CDO Worker | Chỉ cho queue ARN của TF1; Ingest chỉ `SendMessage`, Worker chỉ receive/delete/change visibility. |
+| DynamoDB gateway endpoint | Ingest/Worker/Integration | Chỉ table `incident_state`; ưu tiên IAM condition và table/index scope. |
+| S3 gateway endpoint | Ingest/Worker/AI/Integration | Chỉ bucket audit/evidence; deny public; prefix theo `{tenant_id}/{service}/{incident_id}`. |
+| Secrets Manager endpoint | Lambda/Worker/AI/Integration | Chỉ secret ARN cần thiết cho từng role. |
+| CloudWatch Logs endpoint | Lambda/pods nếu export trực tiếp | Chỉ log groups của TF1; retention policy bắt buộc. |
+| STS endpoint | IRSA / Pod Identity | Cần cho assume role; restrict bằng IAM trust policy. |
+| ECR endpoints | EKS nodes/pods | Pull image từ ECR private repo. |
+| Bedrock endpoint nếu bật | AI Engine | Chỉ model allowlist và region approved. |
+
+Outbound internet rule:
+
+- App/demo public traffic đi qua ALB inbound, không cần app mở outbound rộng nếu chỉ emit telemetry nội bộ.
+- Jira/Slack là external SaaS nên Integration Layer có thể cần NAT Gateway hoặc egress proxy.
+- AI Engine không nên có outbound internet tự do. Nếu cần Bedrock, dùng AWS endpoint. Nếu cần evidence, gọi internal evidence proxy.
+- Nếu dùng NAT, tách route table/private subnet theo workload nhạy cảm để tránh mọi pod đều có public egress.
+
+### 3.6 Resource policy controls beyond SG
+
+Một số rủi ro không giải quyết bằng Security Group được, nên cần resource policy/IAM condition:
+
+| Resource | Required controls |
+|---|---|
+| S3 audit/evidence bucket | Block Public Access, deny non-TLS, SSE-KMS, lifecycle, optional Object Lock, prefix convention theo tenant/service/incident, IAM role chỉ truy cập prefix cần thiết. |
+| SQS FIFO queue | SSE enabled, redrive policy tới FIFO DLQ, queue policy chỉ cho Ingest Lambda send và Worker consume, alarm on DLQ > 0. |
+| DynamoDB `incident_state` | Encryption, PITR nếu budget cho phép, TTL, conditional write, IAM scope theo table/index, không lưu raw logs/full report. |
+| Secrets Manager | Secret resource policy nếu cross-account; rotation; no wildcard read; audit secret read spike. |
+| KMS key | Key policy chỉ cho workload roles liên quan; enable rotation; không dùng một CMK chung cho toàn bộ account nếu tách environment. |
+| CloudWatch Logs | Retention 7-14 ngày demo hoặc policy prod; redact token; không log raw Authorization header. |
+
+### 3.7 Edge protection: WAF / Shield / ALB
 
 Nếu có public ALB:
 
