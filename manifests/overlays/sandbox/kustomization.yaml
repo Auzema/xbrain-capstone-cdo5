@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../base/ai-engine
+- ../../base/platform-service
+- mock-secrets.yaml
+
+namePrefix: tf1-
+
+configMapGenerator:
+- behavior: merge
+  literals:
+  - ENV_NAME=sandbox
+  - LOG_LEVEL=DEBUG
+  name: platform-config
+
+images:
+- name: ai-engine
+  newName: 856862064226.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-ai-engine
+  newTag: latest
+- name: platform-service
+  newName: 856862064226.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-platform-service
+  newTag: sandbox-c480d91
