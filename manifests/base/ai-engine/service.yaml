@@ -9,7 +9,7 @@ spec:
     app: ai-engine
   ports:
     - name: http
-      port: 8001
-      targetPort: 8001
+      port: 8080
+      targetPort: 8080
       protocol: TCP
   type: ClusterIP

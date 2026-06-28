@@ -30,7 +30,7 @@ spec:
           image: ai-engine
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8001
+            - containerPort: 8080
               name: http
           securityContext:
             allowPrivilegeEscalation: false
@@ -46,14 +46,14 @@ spec:
               memory: "256Mi"
           livenessProbe:
             httpGet:
-              path: /health
-              port: 8001
+              path: /healthz
+              port: 8080
             initialDelaySeconds: 5
             periodSeconds: 15
           readinessProbe:
             httpGet:
-              path: /health
-              port: 8001
+              path: /readyz
+              port: 8080
             initialDelaySeconds: 3
             periodSeconds: 10
   syncPolicy:
