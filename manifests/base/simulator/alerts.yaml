@@ -14,7 +14,6 @@ spec:
           labels:
             severity: critical
             team: core-payments
-            region: ap-southeast-1
           annotations:
             summary: "High Latency Detected in Payment Gateway"
             description: "The 99th percentile latency of the payment-gateway service has exceeded 2000ms. This might indicate a degradation in downstream processing."
