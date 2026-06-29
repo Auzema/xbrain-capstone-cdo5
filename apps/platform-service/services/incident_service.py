@@ -21,8 +21,10 @@ class IncidentService:
         response: TriageResponse = await self._ai_client.triage(request)
         
         # 2. Lấy ticket payload và tạo Jira Ticket
+        import asyncio
         ticket = response.ticket_payload
-        ticket_id = self._ticket_creator.create_ticket(
+        ticket_id = await asyncio.to_thread(
+            self._ticket_creator.create_ticket,
             summary=ticket.summary,
             description=ticket.description
         )
@@ -35,7 +37,7 @@ class IncidentService:
             f"*Root Cause:* {response.suspected_root_cause.summary}\n"
             f"*Recommended Actions:*\n{action_text}"
         )
-        self._notifier.notify(message)
+        await asyncio.to_thread(self._notifier.notify, message)
 
         return {
             "status": "success",

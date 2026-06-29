@@ -32,7 +32,7 @@ class JiraTicketCreator(ITicketCreator):
                 "project": {"key": self.jira_project},
                 "summary": summary,
                 "description": description,
-                "issuetype": {"name": "Incident"}
+                "issuetype": {"name": "Task"}
             }
         }
         

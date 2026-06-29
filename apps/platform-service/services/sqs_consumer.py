@@ -30,7 +30,8 @@ class SQSConsumer:
         """Vòng lặp vô hạn poll message từ SQS."""
         while True:
             try:
-                response = self._sqs.receive_message(
+                response = await asyncio.to_thread(
+                    self._sqs.receive_message,
                     QueueUrl=config.SQS_QUEUE_URL,
                     MaxNumberOfMessages=1,
                     WaitTimeSeconds=10,  # Long-polling
@@ -39,7 +40,8 @@ class SQSConsumer:
                     for msg in response["Messages"]:
                         body = json.loads(msg["Body"])
                         await self._handler(body)
-                        self._sqs.delete_message(
+                        await asyncio.to_thread(
+                            self._sqs.delete_message,
                             QueueUrl=config.SQS_QUEUE_URL,
                             ReceiptHandle=msg["ReceiptHandle"],
                         )
