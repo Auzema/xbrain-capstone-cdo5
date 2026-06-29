@@ -14,7 +14,7 @@ spec:
 
   source:
     repoURL: https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git
-    targetRevision: feat/implementation/minh
+    targetRevision: HEAD
     path: manifests/argocd/apps
 
   destination:

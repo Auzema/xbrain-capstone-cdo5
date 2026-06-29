@@ -25,7 +25,7 @@ spec:
               - $values/manifests/overlays/{{env}}/values/alertmanager-value.yml
               - $values/manifests/overlays/{{env}}/values/grafana-values.yaml
         - repoURL: "https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git"
-          targetRevision: feat/implementation/minh
+          targetRevision: HEAD
           ref: values
       destination:
         server: https://kubernetes.default.svc
@@ -58,7 +58,7 @@ spec:
       project: default
       source:
         repoURL: "https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git"
-        targetRevision: feat/implementation/minh
+        targetRevision: HEAD
         path: "manifests/overlays/{{.env}}"
       destination:
         server: "https://kubernetes.default.svc"
