@@ -1,3 +1,5 @@
+data "aws_partition" "current" {}
+
 # 1. Tạo SQS FIFO Queue
 resource "aws_sqs_queue" "incident_queue" {
   name                        = "${var.prefix}-incident-queue.fifo"
@@ -26,7 +28,7 @@ resource "aws_iam_role" "ingest_lambda_role" {
 
 resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
   role       = aws_iam_role.ingest_lambda_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 data "aws_iam_policy_document" "lambda_sqs_policy" {
@@ -114,6 +116,18 @@ resource "aws_lambda_permission" "apigw_invoke" {
   function_name = aws_lambda_function.ingest_lambda.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.ingest_api.execution_arn}/*/*"
+}
+
+resource "aws_ssm_parameter" "sqs_queue_url" {
+  name  = "${var.ssm_parameter_prefix}/sqs_queue_url"
+  type  = "String"
+  value = aws_sqs_queue.incident_queue.url
+}
+
+resource "aws_ssm_parameter" "alertmanager_webhook_url" {
+  name  = "${var.ssm_parameter_prefix}/alertmanager_webhook_url"
+  type  = "String"
+  value = aws_apigatewayv2_api.ingest_api.api_endpoint
 }
 
 

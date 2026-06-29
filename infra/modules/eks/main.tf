@@ -1,3 +1,5 @@
+data "aws_partition" "current" {}
+
 locals {
   prefix = "${var.project}-${var.environment}"
 }
@@ -50,7 +52,7 @@ module "eks" {
         principal_arn = var.admin_role_arn
         policy_associations = {
           admin = {
-            policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+            policy_arn   = "arn:${data.aws_partition.current.partition}:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
             access_scope = { type = "cluster" }
           }
         }
@@ -62,7 +64,7 @@ module "eks" {
         principal_arn = var.devops_team_role_arn
         policy_associations = {
           dev_access = {
-            policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+            policy_arn   = "arn:${data.aws_partition.current.partition}:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
             access_scope = { type = "cluster" }
           }
         }
@@ -74,7 +76,7 @@ module "eks" {
         principal_arn = var.backend_devs_role_arn
         policy_associations = {
           dev_access = {
-            policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
+            policy_arn   = "arn:${data.aws_partition.current.partition}:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
             access_scope = { type = "cluster" }
           }
         }

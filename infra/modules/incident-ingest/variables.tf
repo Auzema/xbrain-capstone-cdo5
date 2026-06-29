@@ -36,3 +36,8 @@ variable "sqs_visibility_timeout" {
   description = "Visibility timeout for SQS in seconds"
   default     = 300
 }
+
+variable "ssm_parameter_prefix" {
+  type        = string
+  description = "Prefix for SSM Parameter names (e.g. /project/environment)"
+}

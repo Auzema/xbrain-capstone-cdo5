@@ -1,6 +1,8 @@
 
 
+data "aws_partition" "current" {}
 data "aws_caller_identity" "current" {}
+
 locals {
   prefix         = "${var.project}-${var.environment}"
   tfstate_bucket = "xbrain-capstone-cdo5-${var.environment}-tfstate"
@@ -107,8 +109,8 @@ module "github_oidc" {
           "s3:ListBucket"
         ]
         Resource = [
-          "arn:aws:s3:::${local.tfstate_bucket}",
-          "arn:aws:s3:::${local.tfstate_bucket}/*"
+          "arn:${data.aws_partition.current.partition}:s3:::${local.tfstate_bucket}",
+          "arn:${data.aws_partition.current.partition}:s3:::${local.tfstate_bucket}/*"
         ]
       }
     ]
@@ -131,20 +133,5 @@ module "incident_ingest" {
   tags                   = var.tags
   lambda_source_dir      = "${path.module}/../../../apps/ingest-lambda"
   lambda_zip_output_path = "${path.module}/.temp/ingest_lambda.zip"
+  ssm_parameter_prefix   = "/${var.project}/${var.environment}"
 }
-
-resource "aws_ssm_parameter" "sqs_queue_url" {
-  name  = "/${var.project}/${var.environment}/sqs_queue_url"
-  type  = "String"
-  value = module.incident_ingest.sqs_queue_url
-}
-
-resource "aws_ssm_parameter" "alertmanager_webhook_url" {
-  name  = "/${var.project}/${var.environment}/alertmanager_webhook_url"
-  type  = "String"
-  value = module.incident_ingest.apigw_url
-}
-
-
-
-
