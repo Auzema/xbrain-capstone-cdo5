@@ -1,4 +1,4 @@
-name: Sandbox - Platform Service
+name: Sandbox - Simulator
 
 on:
   push:
@@ -6,16 +6,16 @@ on:
       - develop
       - "feat/**"
     paths:
-      - "apps/platform-service/**"
+      - "apps/simulator/**"
   workflow_dispatch:
 
 env:
   AWS_REGION: ap-southeast-1
   ECR_REGISTRY: 458580846647.dkr.ecr.ap-southeast-1.amazonaws.com
-  PLATFORM_REPO: xbrain-cdo5-sandbox-tf1-platform-service
+  SIMULATOR_REPO: xbrain-cdo5-sandbox-tf1-simulator
 
 jobs:
-  build-and-deploy-platform:
+  build-and-deploy-simulator:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -40,10 +40,10 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and Push Platform Service
-        working-directory: apps/platform-service
+      - name: Build and Push Simulator
+        working-directory: apps/simulator
         run: |
-          IMAGE=$ECR_REGISTRY/$PLATFORM_REPO:$IMAGE_TAG
+          IMAGE=$ECR_REGISTRY/$SIMULATOR_REPO:$IMAGE_TAG
           docker build -t $IMAGE .
           docker push $IMAGE
 
@@ -57,7 +57,7 @@ jobs:
 
           # Di chuyển vào thư mục sandbox để sửa file
           cd manifests/overlays/sandbox
-          kustomize edit set image platform-service=$ECR_REGISTRY/$PLATFORM_REPO:$IMAGE_TAG
+          kustomize edit set image simulator=$ECR_REGISTRY/$SIMULATOR_REPO:$IMAGE_TAG
 
           # Quay lại root để commit
           cd ../../../
@@ -66,7 +66,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "🚀 deploy(platform-service): update sandbox to $IMAGE_TAG"
+            git commit -m "🚀 deploy(simulator): update sandbox to $IMAGE_TAG"
             git pull --rebase origin ${GITHUB_REF_NAME}
             git push origin HEAD:${GITHUB_REF_NAME}
           fi

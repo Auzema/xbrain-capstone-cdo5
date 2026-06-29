@@ -11,8 +11,8 @@ on:
   workflow_dispatch:
 
 env:
-  AWS_REGION: us-east-1
-  ECR_REGISTRY: 856862064226.dkr.ecr.us-east-1.amazonaws.com
+  AWS_REGION: ap-southeast-1
+  ECR_REGISTRY: 458580846647.dkr.ecr.ap-southeast-1.amazonaws.com
   AI_REPO: xbrain-cdo5-sandbox-tf1-ai-engine
 
 jobs:
@@ -35,7 +35,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::856862064226:role/xbrain-cdo5-sandbox-ci
+          role-to-assume: arn:aws:iam::458580846647:role/xbrain-cdo5-sandbox-ci
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
