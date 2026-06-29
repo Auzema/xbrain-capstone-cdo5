@@ -133,5 +133,18 @@ module "incident_ingest" {
   lambda_zip_output_path = "${path.module}/.temp/ingest_lambda.zip"
 }
 
+resource "aws_ssm_parameter" "sqs_queue_url" {
+  name  = "/${var.project}/${var.environment}/sqs_queue_url"
+  type  = "String"
+  value = module.incident_ingest.sqs_queue_url
+}
+
+resource "aws_ssm_parameter" "alertmanager_webhook_url" {
+  name  = "/${var.project}/${var.environment}/alertmanager_webhook_url"
+  type  = "String"
+  value = module.incident_ingest.apigw_url
+}
+
+
 
 

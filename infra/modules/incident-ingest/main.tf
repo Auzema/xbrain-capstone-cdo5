@@ -75,3 +75,45 @@ resource "aws_lambda_function_url" "ingest_webhook_url" {
   function_name      = aws_lambda_function.ingest_lambda.function_name
   authorization_type = "NONE" # Mở public cho Alertmanager gọi (Thực tế nên cài Auth)
 }
+
+resource "aws_lambda_permission" "public_invoke" {
+  statement_id           = "FunctionURLAllowPublicAccess"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.ingest_lambda.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
+}
+
+# 6. Tạo API Gateway HTTP API
+resource "aws_apigatewayv2_api" "ingest_api" {
+  name          = "${var.prefix}-ingest-api"
+  protocol_type = "HTTP"
+}
+
+resource "aws_apigatewayv2_integration" "lambda_integration" {
+  api_id           = aws_apigatewayv2_api.ingest_api.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.ingest_lambda.invoke_arn
+}
+
+resource "aws_apigatewayv2_route" "default_route" {
+  api_id    = aws_apigatewayv2_api.ingest_api.id
+  route_key = "POST /"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+}
+
+resource "aws_apigatewayv2_stage" "default_stage" {
+  api_id      = aws_apigatewayv2_api.ingest_api.id
+  name        = "$default"
+  auto_deploy = true
+}
+
+resource "aws_lambda_permission" "apigw_invoke" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.ingest_lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.ingest_api.execution_arn}/*/*"
+}
+
+

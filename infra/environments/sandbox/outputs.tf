@@ -33,6 +33,6 @@ output "sqs_queue_url" {
 }
 
 output "ingest_webhook_url" {
-  description = "Public URL of the Ingest Lambda (Webhook endpoint cho Alertmanager)"
-  value       = module.incident_ingest.ingest_webhook_url
+  description = "Public URL of the Ingest Lambda Webhook"
+  value       = module.incident_ingest.apigw_url
 }
