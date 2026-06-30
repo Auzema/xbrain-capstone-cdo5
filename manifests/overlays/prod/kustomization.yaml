@@ -28,3 +28,7 @@ images:
 - name: simulator
   newName: 458580846647.dkr.ecr.ap-southeast-1.amazonaws.com/xbrain-cdo5-prod-tf1-simulator
   newTag: latest
+
+patchesStrategicMerge:
+- rollout-patch.yaml
+- hpa-patch.yaml

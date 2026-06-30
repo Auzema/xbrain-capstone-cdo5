@@ -5,6 +5,7 @@ resources:
   - serviceaccount.yaml
   - deployment.yaml
   - service.yaml
+  - hpa.yaml
 
 configMapGenerator:
   - name: platform-config

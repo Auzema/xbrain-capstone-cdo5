@@ -1,5 +1,5 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: ai-engine
   labels:
@@ -11,10 +11,9 @@ spec:
     matchLabels:
       app: ai-engine
   strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
+    canary:
+      steps:
+        - setWeight: 100
   template:
     metadata:
       labels:

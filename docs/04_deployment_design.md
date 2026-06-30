@@ -97,13 +97,13 @@ Pipeline gồm **3 Stage → mỗi Stage nhiều Step → mỗi Step nhiều Job
 | Quality Gate | Đánh giá lại các metrics test/scan | SonarQube hoặc logic trong bash | Pass các quality rules cơ bản |
 | Push image to ECR | Đẩy image chính thức lên AWS ECR | `aws ecr get-login-password \| docker login` → `docker push <ecr-uri>:<sha>` | Image tồn tại trên ECR |
 
-**Step 03: Dev Deployment**
+**Step 03: GitOps CD Update**
 
 | Job | Check gì | Tool / Lệnh | Pass condition |
 |---|---|---|---|
-| ArgoCD AppSet deploy | Tạo/cập nhật Application trong ArgoCD theo ApplicationSet pattern | `kubectl apply -f appset-sandbox.yaml` | ApplicationSet tạo Application object thành công |
-| ArgoCD sync to sandbox | Đồng bộ manifest mới nhất vào cluster Sandbox | `argocd app sync <app-name>` | App status = `Synced` + `Healthy` |
-| Smoke Test on sandbox | Service sống, endpoint cơ bản phản hồi | `curl -f http://<dev-endpoint>/health` script | HTTP 200, response time < ngưỡng |
+| Kustomize Update | Ghi đè image tag mới vào manifest cấu hình | `kustomize edit set image` | File kustomization.yaml được cập nhật |
+| Git Commit & Push | Đẩy cấu hình mới lên kho chứa GitOps | `git commit -m "[skip ci]" && git push` | Commit thành công lên branch |
+| ArgoCD Auto-Sync | ArgoCD tự động phát hiện thay đổi trên Git và kéo về Cluster | ArgoCD Controller (Tự động) | App status = `Synced` + `Healthy` |
 
 ---
 
@@ -154,16 +154,16 @@ Pipeline gồm **3 Stage → mỗi Stage nhiều Step → mỗi Step nhiều Job
 
 | Job | Check gì | Tool / Lệnh | Pass condition |
 |---|---|---|---|
-| Re-tag image | Gắn tag production chính thức cho cùng digest | `crane tag <ecr-uri>@<digest> prod-<version>` | Tag mới trỏ đúng digest gốc |
-| Update metadata | Cập nhật thông tin version, commit SHA, thời gian deploy | Ghi vào release tracking | Metadata đầy đủ, truy vết được |
+| Crane Copy | Copy nguyên xi image từ Staging sang Prod ECR (không build lại) | `crane copy <staging-image> <prod-image>` | Image tồn tại trên kho Prod |
+| Cosign Signing | Ký điện tử xác thực nguồn gốc image trên Prod | `cosign sign --yes <prod-image>` | Chữ ký được tạo thành công |
 
 **Step 03: Canary Deploy**
 
 | Job | Check gì | Tool / Lệnh | Pass condition |
 |---|---|---|---|
-| Progressive rollout | Tăng dần traffic theo bước: 10% → 50% → 100% | `Rollout` CRD với `strategy.canary.steps` | Mỗi step pass AnalysisRun |
+| Progressive rollout | Tăng dần traffic: 25% → 50% → 75% → 100% (Dừng 10 phút mỗi mốc) | `Rollout` CRD patch qua `kustomize` | Các bước nhảy tự động sau thời gian pause |
 | Monitoring | Theo dõi metric real-time trong lúc canary chạy | Argo Rollouts `AnalysisTemplate` query Prometheus | Metric trong ngưỡng cho phép |
-| Auto rollback | Nếu vi phạm abort criteria, tự động dừng và rollback | Argo Rollouts tự `abort` + scale down | Rollback hoàn tất, traffic 100% về stable version |
+| Auto rollback | Nếu vi phạm abort criteria, tự động dừng và rollback | Argo Rollouts tự ngắt traffic khỏi bản lỗi | Rollback hoàn tất, traffic 100% về stable version |
 
 ---
 
@@ -186,9 +186,10 @@ Pipeline gồm **3 Stage → mỗi Stage nhiều Step → mỗi Step nhiều Job
 Thiết kế lý thuyết ở mục 2.2 được map trực tiếp với mã nguồn thực tế trong repo như sau:
 
 #### 1. CI/CD Workflows (GitHub Actions)
-Đảm nhiệm **Step 01 (Validation)**, **Step 02 (Build & Security)**, và một phần **Step 03 (GitOps Deploy)**.
-- **`.github/workflows/sandbox-*.yaml`**: Map với **Stage 1**. Lắng nghe sự kiện push vào `feat/**` hoặc `develop`, thực hiện build Docker, push lên ECR và tự động cập nhật image tag bằng Kustomize vào môi trường sandbox.
-- *(Tương tự cho các file workflow staging/prod nếu có trong tương lai để phục vụ Stage 2 và Stage 3).*
+Hệ thống sử dụng Reusable Workflows và Custom Actions để tối đa hóa tái sử dụng code (DRY).
+- **`ci-ai-engine.yml` / `ci-platform-service.yml`**: Dynamic CI pipeline. Tự động nội suy môi trường (`sandbox` hay `staging`) dựa trên nhánh Git được push. Gọi action `build-push-ecr` (Trivy + Cosign) và kết thúc bằng việc kích hoạt `cd-update-argocd.yml`.
+- **`cd-update-argocd.yml`**: Reusable workflow chịu trách nhiệm GitOps (Kustomize edit & git push `[skip ci]`).
+- **`promote-to-prod.yml`**: Workflow thủ công (Dispatch). Nhận staging tag, dùng `crane` copy sang Prod ECR, ký số `cosign`, và trigger CD cập nhật overlay Prod.
 
 #### 2. GitOps Configuration (Mục tiêu của ArgoCD)
 Đảm nhiệm phần **Deployment** trên Kubernetes, quản lý hoàn toàn bằng Kustomize.
@@ -225,17 +226,26 @@ Thiết kế lý thuyết ở mục 2.2 được map trực tiếp với mã ngu
 
 ## 4. Deployment strategy
 
-### 4.1 Strategy
+### 4.1 Cấu trúc Auto-Scaling & GitOps
+- **GitOps Rollout Pattern**: Chuyển đổi toàn bộ `Deployment` truyền thống thành `Rollout` CRD tại thư mục `base/` (giữ nguyên tên file `deployment.yaml` để bảo tồn tài nguyên CPU/RAM, probes, securityContext).
+- **Horizontal Pod Autoscaler (HPA)**: Áp dụng cho cả **AI Engine** và **Platform Service**.
+  - **Scale metric**: Tự động scale dựa trên **CPU (Mục tiêu 75%)** để đảm bảo Availability.
+  - **Sandbox / Staging**: `minReplicas: 1`, `maxReplicas: 2`.
+  - **Production**: Bắt buộc `minReplicas: 2` (High Availability), `maxReplicas: 10`.
 
-- **Canary** (preferred cho AI Engine): 10% → 50% → 100% qua các bước pause và check metric tự động (AnalysisRun).
-- **Rolling Update** (cho Platform Service): Đơn giản hoá vận hành với `maxUnavailable: 0` và `maxSurge: 1`.
+### 4.2 Canary Strategy (Production)
+- **Phạm vi**: Áp dụng chung cho cả **AI Engine** và **Platform Service**.
+- **Môi trường Non-Prod**: Cấu hình mặc định tại `base/` tung thẳng 100% traffic để dev test nhanh.
+- **Môi trường Production**: Kustomize Patch tại `overlays/prod/` sẽ ép tiến trình Canary an toàn.
+  - Tiến trình: **25% → 50% → 75% → 100%**.
+  - **Pause duration**: Tự động dừng **10m (10 phút)** ở mỗi mốc để kiểm tra độ ổn định trước khi nhảy mốc tiếp theo.
 - **Abort criteria**:
   - Error rate > 0.5% (5xx errors)
   - P99 latency > 1000ms
   - AI confidence avg < 0.5
-- **Auto-rollback** on abort: Argo Rollouts tự động scale down canary pods nếu vi phạm criteria.
+- **Auto-rollback** on abort: Argo Rollouts tự động ngắt traffic khỏi bản Canary và đưa 100% traffic về bản Stable nếu vi phạm criteria.
 
-### 4.2 Rollback method
+### 4.3 Rollback method
 
 - **Primary**: Argo Rollouts auto-abort / ArgoCD rollback to previous Git SHA.
 - **Secondary**: Terraform state rollback bằng `terraform state pull` version cũ (nếu infra change lỗi).
