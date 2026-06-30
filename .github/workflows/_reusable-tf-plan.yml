@@ -1,21 +1,25 @@
-name: Infra - Plan
+name: Reusable TF Plan
 on:
-  pull_request:
-    branches:
-      - "main"
-      - "develop"
-    paths:
-      - "infra/**"
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  id-token: write
-  pull-requests: write
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: "Environment name (sandbox, staging, prod)"
+      tf_working_dir:
+        required: true
+        type: string
+        description: "Terraform working directory"
 
 jobs:
   terraform-plan:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -28,17 +32,21 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
+      - name: Terraform Format
+        working-directory: ${{ inputs.tf_working_dir }}
+        run: terraform fmt -check
+
       - name: Terraform Init
-        working-directory: infra/environments/sandbox
+        working-directory: ${{ inputs.tf_working_dir }}
         run: terraform init
 
       - name: Terraform Validate
-        working-directory: infra/environments/sandbox
+        working-directory: ${{ inputs.tf_working_dir }}
         run: terraform validate
 
       - name: Terraform Plan
         id: plan
-        working-directory: infra/environments/sandbox
+        working-directory: ${{ inputs.tf_working_dir }}
         run: terraform plan -no-color
         continue-on-error: true
 
@@ -50,8 +58,7 @@ jobs:
         with:
           script: |
             const output = `#### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
-
-            <details><summary>Show Plan</summary>
+            <details><summary>Show Plan for **${{ inputs.environment }}**</summary>
 
             \`\`\`\n
             ${process.env.PLAN}
@@ -59,7 +66,7 @@ jobs:
 
             </details>
 
-            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+            *Pushed by: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Environment: \`${{ inputs.environment }}\`*`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,

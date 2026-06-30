@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       app_name:
-        description: 'Application Name to Promote'
+        description: "Application Name to Promote"
         required: true
         type: choice
         options:
@@ -11,11 +11,11 @@ on:
           - ai-engine
           - simulator
       staging_tag:
-        description: 'Existing tag from Staging to promote (e.g. staging-abc1234)'
+        description: "Existing tag from Staging to promote (e.g. staging-abc1234)"
         required: true
         type: string
       release_tag:
-        description: 'New Release Tag for Prod (e.g. v1.0.0)'
+        description: "New Release Tag for Prod (e.g. v1.0.0)"
         required: true
         type: string
 
@@ -35,7 +35,7 @@ jobs:
           PREFIX="${{ vars.ECR_REPO_PREFIX }}"
           echo "staging_repo=${PREFIX}-staging-tf1-${{ inputs.app_name }}" >> $GITHUB_OUTPUT
           echo "prod_repo=${PREFIX}-prod-tf1-${{ inputs.app_name }}" >> $GITHUB_OUTPUT
-          
+
       - name: AWS Auth
         uses: ./.github/actions/aws-auth-oidc
         with:
@@ -61,16 +61,16 @@ jobs:
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
         with:
-          cosign-release: 'v2.2.4'
+          cosign-release: "v2.2.4"
 
       - name: Sign Production Image
         run: |
           DEST="${{ vars.ECR_REGISTRY }}/${{ steps.set-repo.outputs.prod_repo }}:${{ inputs.release_tag }}"
           cosign sign --yes $DEST
 
-  cd-update:
+  _reusable-update:
     needs: promote-image
-    uses: ./.github/workflows/cd-update-argocd.yml
+    uses: ./.github/workflows/_reusable-update-argocd.yml
     with:
       app-name: ${{ inputs.app_name }}
       image-tag: "${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPO_PREFIX }}-prod-tf1-${{ inputs.app_name }}:${{ inputs.release_tag }}"

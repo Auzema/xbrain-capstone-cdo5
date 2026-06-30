@@ -1,0 +1,170 @@
+name: CI - K8s Manifests
+on:
+  pull_request:
+    paths:
+      - "manifests/**"
+  push:
+    branches:
+      - "main"
+      - "release/**"
+      - "develop"
+    paths:
+      - "manifests/**"
+  workflow_dispatch:
+
+jobs:
+  validate-apps:
+    name: Validate App Manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Validate with Kustomize & Kubeconform
+        run: |
+          echo "Installing Kubeconform..."
+          curl -sL https://github.com/yannh/kubeconform/releases/download/v0.6.4/kubeconform-linux-amd64.tar.gz | tar -xz
+          sudo mv kubeconform /usr/local/bin/
+
+          # Loop through all available overlays dynamically
+          if [ -d "manifests/overlays" ]; then
+            for overlay in manifests/overlays/*; do
+              if [ -d "$overlay" ]; then
+                echo "======================================"
+                echo "Validating overlay: $overlay"
+                echo "======================================"
+                
+                # 1. Check if kustomization.yaml exists to avoid errors in empty dirs
+                if [ ! -f "$overlay/kustomization.yaml" ] && [ ! -f "$overlay/kustomization.yml" ]; then
+                   echo "No kustomization file found in $overlay, skipping..."
+                   continue
+                fi
+
+                # 2. Kustomize Build (Catches missing files, syntax errors in Kustomization)
+                kustomize build "$overlay" > compiled.yaml
+                
+                # 3. Kubeconform (Catches invalid K8s API fields, typos in spec)
+                # -ignore-missing-schemas helps ignore CRDs (like ArgoCD Application) that aren't in the default schema
+                kubeconform -summary -ignore-missing-schemas compiled.yaml
+              fi
+            done
+          else
+            echo "Directory manifests/overlays not found. Skipping..."
+          fi
+
+  validate-policies:
+    name: Validate Gatekeeper Policies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Validate Policies with Kustomize & Kubeconform
+        run: |
+          echo "Installing Kubeconform..."
+          curl -sL https://github.com/yannh/kubeconform/releases/download/v0.6.4/kubeconform-linux-amd64.tar.gz | tar -xz
+          sudo mv kubeconform /usr/local/bin/
+
+          # Download Gatekeeper CRD schemas so kubeconform can validate ConstraintTemplates
+          echo "Downloading Gatekeeper CRD schemas..."
+          mkdir -p /tmp/gatekeeper-schemas
+          curl -sL https://raw.githubusercontent.com/open-policy-agent/gatekeeper/master/charts/gatekeeper/crds/constrainttemplate-customresourcedefinition.yaml \
+            -o /tmp/gatekeeper-schemas/constrainttemplate.yaml || true
+
+          if [ -d "manifests/policies/overlays" ]; then
+            for overlay in manifests/policies/overlays/*; do
+              if [ -d "$overlay" ]; then
+                echo "======================================"
+                echo "Validating policy overlay: $overlay"
+                echo "======================================"
+                
+                if [ ! -f "$overlay/kustomization.yaml" ] && [ ! -f "$overlay/kustomization.yml" ]; then
+                   echo "No kustomization file found in $overlay, skipping..."
+                   continue
+                fi
+
+                # 1. Kustomize Build (Catches broken references, YAML syntax errors)
+                kustomize build "$overlay" > compiled-policies.yaml
+                echo "✅ Kustomize build succeeded for $overlay"
+
+                # 2. Kubeconform (Validates YAML structure)
+                # -ignore-missing-schemas: Gatekeeper Constraint CRDs are dynamically generated, skip them
+                kubeconform -summary -ignore-missing-schemas compiled-policies.yaml
+                echo "✅ Kubeconform validation passed for $overlay"
+              fi
+            done
+          else
+            echo "Directory manifests/policies/overlays not found. Skipping..."
+          fi
+
+  gator-test:
+    name: Gatekeeper Policy Enforcement Test
+    needs: [validate-apps, validate-policies]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Install Gator CLI
+        run: |
+          GATOR_VERSION="v3.17.1"
+          curl -sL "https://github.com/open-policy-agent/gatekeeper/releases/download/${GATOR_VERSION}/gator-${GATOR_VERSION}-linux-amd64.tar.gz" | tar -xz
+          sudo mv gator /usr/local/bin/
+          gator version
+
+      - name: Cross-validate Apps against Policies
+        run: |
+          ENVS=("sandbox" "staging" "prod")
+          FAILED=0
+
+          for env in "${ENVS[@]}"; do
+            echo "======================================"
+            echo "Testing environment: $env"
+            echo "======================================"
+
+            APP_OVERLAY="manifests/overlays/$env"
+            POLICY_OVERLAY="manifests/policies/overlays/$env"
+
+            # Skip if either overlay is missing
+            if [ ! -d "$APP_OVERLAY" ] || [ ! -d "$POLICY_OVERLAY" ]; then
+              echo "⏭️  Skipping $env (missing app or policy overlay)"
+              continue
+            fi
+
+            # 1. Build app manifests for this environment
+            kustomize build "$APP_OVERLAY" > "/tmp/apps-${env}.yaml"
+            echo "✅ Built app manifests for $env"
+
+            # 2. Build policy manifests (ConstraintTemplates + Constraints) for this environment
+            kustomize build "$POLICY_OVERLAY" > "/tmp/policies-${env}.yaml"
+            echo "✅ Built policy manifests for $env"
+
+            # 3. Run gator test: feed policies + app resources together
+            # gator evaluates the app resources against the constraints and reports violations
+            echo "🔍 Running Gatekeeper policy test for $env..."
+            if gator test -f "/tmp/policies-${env}.yaml" -f "/tmp/apps-${env}.yaml"; then
+              echo "✅ $env: All resources comply with policies"
+            else
+              echo "❌ $env: Policy violations detected!"
+              FAILED=1
+            fi
+            echo ""
+          done
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo "============================================"
+            echo "❌ FAILED: One or more environments have policy violations."
+            echo "Fix the issues above before merging."
+            echo "============================================"
+            exit 1
+          fi
+
+          echo "============================================"
+          echo "✅ ALL ENVIRONMENTS PASSED policy checks."
+          echo "============================================"

@@ -1,0 +1,40 @@
+name: Reusable TF Apply
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: "Environment name (sandbox, staging, prod)"
+      tf_working_dir:
+        required: true
+        type: string
+        description: "Terraform working directory"
+
+jobs:
+  terraform-apply:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: AWS Auth
+        uses: ./.github/actions/aws-auth-oidc
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.IAM_ROLE_ARN }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        working-directory: ${{ inputs.tf_working_dir }}
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: ${{ inputs.tf_working_dir }}
+        run: terraform apply -auto-approve
