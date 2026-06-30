@@ -47,7 +47,7 @@ module "eks" {
   }
 
   access_entries = merge(
-    var.admin_role_arn != null && var.admin_role_arn != "" ? {
+    {
       admin = {
         principal_arn = var.admin_role_arn
         policy_associations = {
@@ -57,9 +57,8 @@ module "eks" {
           }
         }
       }
-    } : {},
-
-    var.devops_team_role_arn != null && var.devops_team_role_arn != "" ? {
+    },
+    var.devops_team_role_arn != null ? {
       devops_team = {
         principal_arn = var.devops_team_role_arn
         policy_associations = {
@@ -70,26 +69,16 @@ module "eks" {
         }
       }
     } : {},
-
-    var.backend_devs_role_arn != null && var.backend_devs_role_arn != "" ? {
+    var.backend_devs_role_arn != null ? {
       backend_devs = {
         principal_arn = var.backend_devs_role_arn
         policy_associations = {
-          dev_access = {
-            policy_arn   = "arn:${data.aws_partition.current.partition}:eks::aws:cluster-access-policy/AmazonEKSEditPolicy"
-            access_scope = { type = "cluster" }
-          }
-        }
-      }
-    } : {},
-
-    var.ci_role_arn != null && var.ci_role_arn != "" ? {
-      ci = {
-        principal_arn = var.ci_role_arn
-        policy_associations = {
-          admin = {
-            policy_arn   = "arn:${data.aws_partition.current.partition}:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-            access_scope = { type = "cluster" }
+          view_access = {
+            policy_arn   = "arn:${data.aws_partition.current.partition}:eks::aws:cluster-access-policy/AmazonEKSViewPolicy"
+            access_scope = { 
+              type       = "namespace"
+              namespaces = ["sandbox", "staging", "prod"]
+            }
           }
         }
       }

@@ -27,10 +27,7 @@ variable "scaling_config" {
   })
 }
 
-variable "admin_role_arn" {
-  type    = string
-  default = null
-}
+variable "admin_role_arn" { type = string }
 variable "devops_team_role_arn" {
   type    = string
   default = null
@@ -39,11 +36,6 @@ variable "backend_devs_role_arn" {
   type    = string
   default = null
 }
-variable "ci_role_arn" {
-  type    = string
-  default = null
-}
-
 variable "cluster_endpoint_public_access_cidrs" {
   description = "List of CIDR blocks which can access the Amazon EKS public API server endpoint"
   type        = list(string)

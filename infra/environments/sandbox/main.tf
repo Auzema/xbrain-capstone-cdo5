@@ -52,7 +52,6 @@ module "eks" {
   admin_role_arn        = coalesce(var.admin_role_arn, data.aws_caller_identity.current.arn)
   devops_team_role_arn  = var.devops_team_role_arn
   backend_devs_role_arn = var.backend_devs_role_arn
-  ci_role_arn           = module.github_oidc.role_arn
 
   instance_type  = var.instance_type
   scaling_config = var.eks_scaling_config
