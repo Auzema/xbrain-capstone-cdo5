@@ -4,6 +4,8 @@ metadata:
   name: platform-service
   labels:
     app: platform-service
+    app.kubernetes.io/name: platform-service
+    app.kubernetes.io/part-of: xbrain-cdo5
 spec:
   selector:
     matchLabels:
