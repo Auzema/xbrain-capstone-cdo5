@@ -21,7 +21,7 @@ configMapGenerator:
 images:
 - name: ai-engine
   newName: 458580846647.dkr.ecr.ap-southeast-1.amazonaws.com/xbrain-cdo5-prod-tf1-ai-engine
-  newTag: latest
+  newTag: prod-ac85251
 - name: platform-service
   newName: 458580846647.dkr.ecr.ap-southeast-1.amazonaws.com/xbrain-cdo5-prod-tf1-platform-service
   newTag: latest

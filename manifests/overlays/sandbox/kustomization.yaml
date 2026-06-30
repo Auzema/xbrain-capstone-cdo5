@@ -21,7 +21,7 @@ configMapGenerator:
 images:
 - name: ai-engine
   newName: 458580846647.dkr.ecr.ap-southeast-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-ai-engine
-  newTag: sandbox-820cdbf
+  newTag: sandbox-1518bd8
 - name: platform-service
   newName: 458580846647.dkr.ecr.ap-southeast-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-platform-service
   newTag: sandbox-843da53
