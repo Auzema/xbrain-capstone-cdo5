@@ -1,30 +1,17 @@
 # Hướng Dẫn Xây Dựng Fake Data Cho Các Kịch Bản Sự Cố (Triage Hub)
 
-Tài liệu này tổng hợp **6 kịch bản sự cố thực tế** từ mức độ đơn giản đến phức tạp, đi kèm hướng dẫn chi tiết về cấu trúc dữ liệu (`Alerts`, `Metrics`, `Logs`, `Traces`, `Kubernetes Events`, `Deploys`) cần chuẩn bị để giúp các thành viên trong nhóm chia việc làm dữ liệu giả lập song song.
+Tài liệu này tổng hợp **7 kịch bản sự cố thực tế và phức tạp** (bao gồm cả bão cảnh báo - Alert Storm), đi kèm hướng dẫn chi tiết về cấu trúc dữ liệu (`Alerts`, `Metrics`, `Logs`, `Traces`, `Kubernetes Events`, `Deploys`) cần chuẩn bị để giúp **nhóm 4 người** chia việc làm dữ liệu giả lập song song và bao quát toàn bộ hệ thống.
 
 ---
 
-## 🗺️ Tóm tắt phân chia công việc (Cho nhóm 3 người và 5 người)
-
-### 👥 Phương án A: Phân chia cho nhóm 3 người
-
-| Thành viên | Kịch bản phụ trách | Loại sự cố chủ đạo |
-| :--- | :--- | :--- |
-| **Thành viên 1** | **Scenario 1**: DB Connection Pool Exhaustion<br>**Scenario 4**: Disk Space Saturation | Lỗi Cơ sở dữ liệu & Tài nguyên Lưu trữ |
-| **Thành viên 2** | **Scenario 2**: Container OOMKilled<br>**Scenario 5**: Downstream Network Latency | Lỗi Bộ nhớ Container & Sự cố Mạng kết nối |
-| **Thành viên 3** | **Scenario 3**: API HTTP 5xx Spike (New Deploy)<br>**Scenario 6**: CPU Throttling | Lỗi Code sau Deploy & Nghẽn tính toán CPU |
-
----
-
-### 👥 Phương án B: Phân chia cho nhóm 5 người (Tối ưu hóa vai trò)
+## 🗺️ Tóm tắt phân chia công việc cho nhóm 4 người
 
 | Thành viên | Kịch bản phụ trách | Vai trò kỹ thuật chính |
 | :--- | :--- | :--- |
-| **Thành viên 1** | **Scenario 1**: DB Connection Pool Exhaustion | Thiết kế dữ liệu giả lập về Trễ kết nối Database & Traces |
-| **Thành viên 2** | **Scenario 2**: Container OOMKilled | Thiết kế dữ liệu giả lập sập Pod do RAM & K8s Events |
-| **Thành viên 3** | **Scenario 3**: API HTTP 5xx Spike (New Deploy) | Thiết kế dữ liệu lỗi Code, Deploy History & HTTP 500 |
-| **Thành viên 4** | **Scenario 4**: Disk Space Saturation<br>**Scenario 5**: Downstream Network Latency | Thiết kế dữ liệu lỗi Mạng (Gateway Timeout) & Tràn ổ đĩa |
-| **Thành viên 5** | **Scenario 6**: CPU Throttling <br>+ **Integrator (Tích hợp hệ thống)** | Thiết kế lỗi CPU. Chịu trách nhiệm viết script, thiết lập port-forward, tổng hợp file và bắn lên AWS EKS. |
+| **Thành viên 1** | **Scenario 1**: DB Connection Pool Exhaustion<br>**Scenario 4**: Disk Space Saturation | **Data & Storage (Dữ liệu & Lưu trữ)**:<br>- Giả lập lỗi nghẽn connection pool của PostgreSQL.<br>- Giả lập lỗi cạn kiệt dung lượng đĩa cứng trên Node/Pod. |
+| **Thành viên 2** | **Scenario 2**: Container OOMKilled<br>**Scenario 6**: CPU Throttling | **Infrastructure & Resources (Hạ tầng & Tài nguyên)**:<br>- Giả lập Pod quá tải bộ nhớ RAM dẫn đến bị K8s giết khẩn cấp.<br>- Giả lập Pod nghẽn CPU và bị bóp tài nguyên tính toán. |
+| **Thành viên 3** | **Scenario 3**: API HTTP 5xx Spike (New Deploy)<br>**Scenario 5**: Downstream Network Latency | **Network & Deployment (Mạng & Triển khai)**:<br>- Giả lập lỗi Code phát sinh sau Deploy phiên bản mới.<br>- Giả lập mất gói tin giữa Frontend và API gây Gateway Timeout. |
+| **Thành viên 4** | **Scenario 7**: Alert Storm & Deduplication<br>+ **Integrator (Tích hợp hệ thống)** | **Alerting & Integration (Cảnh báo & Tích hợp)**:<br>- Giả lập bão cảnh báo (15-20 alerts dồn dập cùng lúc) để test tính năng khử trùng lặp và gom nhóm.<br>- Tổng hợp file, chạy script local `run_local_pipeline.ps1`, thiết lập port-forward đẩy lên AWS EKS kiểm thử Slack Webhook. |
 
 ---
 
@@ -228,7 +215,7 @@ TypeError: 'NoneType' object is not subscriptable
 ```
 
 #### 3. Traces (`evidence/traces/`):
-* Trace chỉ rõ: Span gọi của `frontend-web` kéo dài `5000ms` and kết thúc bằng lỗi timeout, trong khi Span của `backend-api` thậm chí không nhận được request (hoặc nhận rất trễ).
+* Trace chỉ rõ: Span gọi của `frontend-web` kéo dài `5000ms` và kết thúc bằng lỗi timeout, trong khi Span của `backend-api` thậm chí không nhận được request (hoặc nhận rất trễ).
 
 ---
 
@@ -263,6 +250,20 @@ TypeError: 'NoneType' object is not subscriptable
 [INFO] 2026-06-30T06:50:01Z - Start compiling PDF financial report for Q2...
 [WARNING] 2026-06-30T06:50:15Z - Thread pool executor capacity warning. Slow execution detected.
 ```
+
+---
+
+### SCENARIO 7: Alert Storm & Deduplication (Bão Cảnh Báo & Khử Trùng Lặp)
+* **Ý tưởng:** Một sự cố nghiêm trọng xảy ra khiến hàng loạt lỗi dội về dồn dập cùng lúc (ví dụ: 15 alerts của dịch vụ `payment-gateway`). Kịch bản này kiểm tra xem bộ lọc Correlator có khử trùng lặp và nén tất cả lại thành đúng 1 Incident duy nhất trên Slack hay không.
+
+#### 1. Raw Alerts (`alerts/raw/`):
+* Thiết kế **15 bản ghi Alert** khác nhau trong vòng 2 phút:
+  * 5 bản ghi lỗi `High Database Connection Latency` cho các Pod khác nhau của `payment-gateway`.
+  * 5 bản ghi lỗi `HTTP 5xx Spiking` xảy ra liên tiếp.
+  * 5 bản ghi lỗi `Service Response Time Slow`.
+
+#### 2. Logs, Metrics, Traces (`evidence/`):
+* Dữ liệu logs/metrics/traces tương ứng mô tả trạng thái tắc nghẽn hệ thống thanh toán diện rộng.
 
 ---
 
