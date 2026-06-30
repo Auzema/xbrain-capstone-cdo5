@@ -1,0 +1,27 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8sblockprivilegedcontainer
+  annotations:
+    description: "Prevents containers from running in privileged mode."
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sBlockPrivilegedContainer
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sblockprivilegedcontainer
+
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          container.securityContext.privileged == true
+          msg := sprintf("Privileged container is not allowed: '%v' in Pod '%v'", [container.name, input.review.object.metadata.name])
+        }
+
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.initContainers[_]
+          container.securityContext.privileged == true
+          msg := sprintf("Privileged init container is not allowed: '%v' in Pod '%v'", [container.name, input.review.object.metadata.name])
+        }

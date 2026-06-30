@@ -5,6 +5,7 @@ metadata:
   labels:
     app.kubernetes.io/name: ai-engine
     app.kubernetes.io/component: ai-engine
+    app.kubernetes.io/part-of: xbrain-cdo5
 spec:
   replicas: 1
   selector:

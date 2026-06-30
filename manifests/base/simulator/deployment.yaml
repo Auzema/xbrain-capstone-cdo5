@@ -4,6 +4,8 @@ metadata:
   name: simulator
   labels:
     app: simulator
+    app.kubernetes.io/name: simulator
+    app.kubernetes.io/part-of: xbrain-cdo5
 spec:
   selector:
     matchLabels:

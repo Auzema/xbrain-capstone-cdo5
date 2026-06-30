@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # ConstraintTemplates (Rego logic - shared across all environments)
+  - templates/k8s-required-labels.yaml
+  - templates/k8s-container-limits.yaml
+  - templates/k8s-block-privileged.yaml
+
+  # Constraints (Rules applying templates)
+  - constraints/require-app-labels.yaml
+  - constraints/require-container-limits.yaml
+  - constraints/block-privileged.yaml
