@@ -1,0 +1,241 @@
+[
+  {
+    "ingest_id": "ingest-20260629-100100-0001",
+    "schema_version": "cdo.alert.v1",
+    "received_at": "2026-06-29T10:01:00Z",
+    "raw_source": "prometheus",
+    "normalized_alert": {
+      "alert_id": "alert-book-service-5xx-001",
+      "tenant_id": "tenant-a",
+      "environment": "prod",
+      "cluster": "eks-prod",
+      "namespace": "bookhub-prod",
+      "source": "prometheus",
+      "service": "book-service",
+      "severity": "critical",
+      "title": "High 5xx rate on book-service",
+      "description": "book-service 5xx rate is above threshold",
+      "started_at": "2026-06-29T10:00:00Z",
+      "labels": {
+        "region": "ap-southeast-1",
+        "pod": "book-service-7d9f6c8d9f-abcd1",
+        "deployment": "book-service",
+        "container": "book-service",
+        "metric_names": [
+          "http_5xx_rate",
+          "request_rate"
+        ],
+        "trace_id": "trace-checkout-001",
+        "status_code": "500",
+        "reason": "high_5xx_rate",
+        "jira_project": "BOOK",
+        "jira_component": "book-service",
+        "runbook_url": "runbook://book-service/high-5xx"
+      }
+    },
+    "validation": {
+      "status": "VALID",
+      "missing_fields": [],
+      "missing_optional_fields": []
+    },
+    "enrichment": {
+      "status": "NOT_NEEDED",
+      "source": null,
+      "enriched_fields": []
+    }
+  },
+  {
+    "ingest_id": "ingest-20260629-100100-0002",
+    "schema_version": "cdo.alert.v1",
+    "received_at": "2026-06-29T10:01:00Z",
+    "raw_source": "prometheus",
+    "normalized_alert": {
+      "alert_id": "alert-book-service-latency-001",
+      "tenant_id": "tenant-a",
+      "environment": "prod",
+      "cluster": "eks-prod",
+      "namespace": "bookhub-prod",
+      "source": "prometheus",
+      "service": "book-service",
+      "severity": "medium",
+      "title": "High latency on book-service",
+      "description": "p95 latency exceeded 2000ms",
+      "started_at": "2026-06-29T10:01:00Z",
+      "labels": {
+        "region": "ap-southeast-1",
+        "pod": "book-service-7d9f6c8d9f-abcd1",
+        "deployment": "book-service",
+        "container": "book-service",
+        "metric_names": [
+          "http_latency_p95_ms"
+        ],
+        "trace_id": "trace-checkout-002",
+        "reason": "high_latency",
+        "jira_project": "BOOK",
+        "jira_component": "book-service",
+        "runbook_url": "runbook://book-service/high-latency"
+      }
+    },
+    "validation": {
+      "status": "VALID",
+      "missing_fields": [],
+      "missing_optional_fields": []
+    },
+    "enrichment": {
+      "status": "NOT_NEEDED",
+      "source": null,
+      "enriched_fields": []
+    }
+  },
+  {
+    "ingest_id": "ingest-20260629-100100-0003",
+    "schema_version": "cdo.alert.v1",
+    "received_at": "2026-06-29T10:01:00Z",
+    "raw_source": "prometheus",
+    "normalized_alert": {
+      "alert_id": "alert-book-service-healthcheck-001",
+      "tenant_id": "tenant-a",
+      "environment": "prod",
+      "cluster": "eks-prod",
+      "namespace": "bookhub-prod",
+      "source": "prometheus",
+      "service": "book-service",
+      "severity": "critical",
+      "title": "Healthcheck failed on book-service",
+      "description": "healthcheck endpoint returned non-200 response",
+      "started_at": "2026-06-29T10:02:00Z",
+      "labels": {
+        "region": "ap-southeast-1",
+        "pod": "book-service-7d9f6c8d9f-abcd1",
+        "deployment": "book-service",
+        "container": "book-service",
+        "metric_names": [
+          "healthcheck_failures"
+        ],
+        "reason": "healthcheck_failed",
+        "jira_project": "BOOK",
+        "jira_component": "book-service"
+      }
+    },
+    "validation": {
+      "status": "VALID",
+      "missing_fields": [],
+      "missing_optional_fields": []
+    },
+    "enrichment": {
+      "status": "NOT_NEEDED",
+      "source": null,
+      "enriched_fields": []
+    }
+  },
+  {
+    "ingest_id": "ingest-20260629-100100-0004",
+    "schema_version": "cdo.alert.v1",
+    "received_at": "2026-06-29T10:01:00Z",
+    "raw_source": "kubernetes",
+    "normalized_alert": {
+      "alert_id": "alert-book-service-crashloop-001",
+      "tenant_id": "tenant-a",
+      "environment": "prod",
+      "cluster": "eks-prod",
+      "namespace": "bookhub-prod",
+      "source": "kubernetes",
+      "service": "book-service",
+      "severity": "critical",
+      "title": "Pod CrashLoopBackOff on book-service",
+      "description": "Pod is in CrashLoopBackOff state",
+      "started_at": "2026-06-29T10:03:00Z",
+      "labels": {
+        "region": "ap-southeast-1",
+        "pod": "book-service-7d9f6c8d9f-abcd1",
+        "deployment": "book-service",
+        "container": "book-service",
+        "reason": "pod_crashloop",
+        "jira_project": "BOOK",
+        "jira_component": "book-service"
+      }
+    },
+    "validation": {
+      "status": "VALID",
+      "missing_fields": [],
+      "missing_optional_fields": []
+    },
+    "enrichment": {
+      "status": "NOT_NEEDED",
+      "source": null,
+      "enriched_fields": []
+    }
+  },
+  {
+    "ingest_id": "ingest-20260629-100100-0005",
+    "schema_version": "cdo.alert.v1",
+    "received_at": "2026-06-29T10:01:00Z",
+    "raw_source": "kubernetes",
+    "normalized_alert": {
+      "alert_id": "alert-book-service-restart-001",
+      "tenant_id": "tenant-a",
+      "environment": "prod",
+      "cluster": "eks-prod",
+      "namespace": "bookhub-prod",
+      "source": "kubernetes",
+      "service": "book-service",
+      "severity": "high",
+      "title": "Container restart on book-service",
+      "description": "Container book-service has restarted multiple times",
+      "started_at": "2026-06-29T10:04:00Z",
+      "labels": {
+        "region": "ap-southeast-1",
+        "pod": "book-service-7d9f6c8d9f-abcd1",
+        "deployment": "book-service",
+        "container": "book-service",
+        "reason": "container_restart",
+        "jira_project": "BOOK",
+        "jira_component": "book-service"
+      }
+    },
+    "validation": {
+      "status": "VALID",
+      "missing_fields": [],
+      "missing_optional_fields": []
+    },
+    "enrichment": {
+      "status": "NOT_NEEDED",
+      "source": null,
+      "enriched_fields": []
+    }
+  },
+  {
+    "ingest_id": "ingest-20260629-100100-0010",
+    "schema_version": "cdo.alert.v1",
+    "received_at": "2026-06-29T10:01:00Z",
+    "raw_source": "prometheus",
+    "normalized_alert": {
+      "alert_id": "alert-order-service-5xx-001",
+      "tenant_id": "tenant-a",
+      "environment": "prod",
+      "cluster": "eks-prod",
+      "namespace": "bookhub-prod",
+      "source": "prometheus",
+      "service": "order-service",
+      "severity": "critical",
+      "title": "High 5xx rate on order-service",
+      "description": "order-service 5xx rate is high",
+      "started_at": "2026-06-29T10:00:00Z",
+      "labels": {
+        "region": "ap-southeast-1",
+        "pod": "order-service-7d9f6c",
+        "deployment": "order-service"
+      }
+    },
+    "validation": {
+      "status": "VALID",
+      "missing_fields": [],
+      "missing_optional_fields": []
+    },
+    "enrichment": {
+      "status": "NOT_NEEDED",
+      "source": null,
+      "enriched_fields": []
+    }
+  }
+]

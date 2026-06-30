@@ -11,7 +11,7 @@ SIMULATOR_URL = "http://localhost:8085/dumbproxy/inject-batch"
 
 async def run_injection():
     # Paths to fake data files
-    base_path = Path("c:/Users/THANH TRUNG/Desktop/Xbrain/xbrain-capstone-cdo5/fake-data/evidence")
+    base_path = Path(__file__).parent.parent / "fake-data" / "evidence"
     metrics_path = base_path / "metrics" / "metrics.json"
     logs_path = base_path / "logs" / "logs.json"
     traces_path = base_path / "traces" / "traces.json"

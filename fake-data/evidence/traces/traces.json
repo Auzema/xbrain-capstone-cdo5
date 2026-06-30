@@ -1,0 +1,15 @@
+[
+  {
+    "trace_id": "trace-checkout-001",
+    "span_id": "span-001",
+    "parent_span_id": null,
+    "service": "book-service",
+    "operation": "POST /v1/books",
+    "ts": "2026-06-29T10:00:00Z",
+    "duration_ms": 3200,
+    "status_code": "500",
+    "labels": {
+      "db": "postgres-book-db"
+    }
+  }
+]
