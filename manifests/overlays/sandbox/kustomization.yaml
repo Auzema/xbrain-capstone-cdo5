@@ -24,7 +24,7 @@ images:
   newTag: sandbox-820cdbf
 - name: platform-service
   newName: 458580846647.dkr.ecr.ap-southeast-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-platform-service
-  newTag: sandbox-843da53
+  newTag: sandbox-09aa165
 - name: simulator
   newName: 458580846647.dkr.ecr.ap-southeast-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-simulator
   newTag: sandbox-09aa165
