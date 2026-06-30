@@ -19,7 +19,7 @@ infra/
 ├── modules/
 │   ├── networking/        # VPC, 3-AZ subnets, NAT, SG, VPC Endpoints
 │   ├── compute/           # EKS cluster, managed node group, IRSA, OIDC
-│   ├── data/              # DynamoDB tables (tenant config, audit index)
+│   ├── data/               # DynamoDB tables (tenant config, audit index)
 │   ├── tenant-provision/  # per-tenant resources (Namespace, Role, DB key)
 │   └── observability/     # CloudWatch Log Groups, Metric Alarms, SNS topics
 ├── environments/
@@ -41,7 +41,8 @@ infra/
 
 ### 2.1 Pipeline stages
 
-![Overview Pipeline](assets/deployment-pipeline-ci-cd.png)
+**Hierarchical CI/CD Architecture (Detailed):**
+![Detailed CI/CD Pipeline](assets/pipeline-cicd.drawio.png)
 
 ```text
 PR opened ──► Build ──► Test ──► Scan ──► Plan ──► Review ──► Merge ──► Apply ──► Smoke test
@@ -56,12 +57,155 @@ PR opened ──► Build ──► Test ──► Scan ──► Plan ──►
 | Apply | ArgoCD / Terraform | Deploy K8s manifests / deploy infra                        | Healthy & Synced / Apply success  |
 | Smoke | Custom script      | K8s Job health check post-deploy / policy validation       | All endpoints 200, valid response |
 
+### 2.1.1 Giải thích chi tiết luồng Hierarchical CI/CD (3 Stage)
+
+Pipeline gồm **3 Stage → mỗi Stage nhiều Step → mỗi Step nhiều Job nhỏ**. Dưới đây là chi tiết từng Job: kiểm tra cái gì, dùng tool nào, lệnh/cấu hình tham khảo, điều kiện pass/fail.
+
+> **Lưu ý phạm vi**: Diagram và bảng dưới đây mô tả **Application Pipeline** (container/K8s). Luồng **Infra Pipeline** (`terraform plan/apply` PR-comment ở mục 1.3) chạy song song, trigger theo path filter `infra/**`, và không nằm trong 3 Stage này.
+
+---
+
+#### STAGE 1: DEVELOPER (PR CI)
+
+> Trigger: PR mở/push vào `feat/*`, `bugfix/*`. Mục tiêu: fail nhanh (fail-fast), chi phí compute thấp.
+
+**Step 01: Validation**
+
+| Job | Check gì | Tool / Lệnh | Pass condition |
+|---|---|---|---|
+| Format Check | Code đúng chuẩn format (indent, quote, import order) | `prettier --check .` (JS/TS), `black --check .` (Python) | Exit code 0, không file nào cần reformat |
+| Lint | Code style, anti-pattern, unused var, complexity | `eslint .` (JS/TS), `flake8` / `ruff check` (Python) | 0 lỗi mức `error`; warning có thể cho qua tuỳ rule |
+| TypeCheck | Kiểu dữ liệu đúng, không type-error | `tsc --noEmit` (TypeScript), `mypy .` (Python) | 0 type error |
+| Unit Tests | Logic từng hàm/module độc lập (mock dependency) | `pytest -m unit` / `jest --testPathPattern=unit` | Coverage ≥ 70% (theo bảng §2.1), Pass 100% |
+| Integration Tests | Tương tác giữa các module (DB, API nội bộ) trong container test | `pytest -m integration` với testcontainers / docker-compose | Tất cả test case pass, không timeout |
+
+**Step 02: Build & Security**
+
+| Job | Check gì | Tool / Lệnh | Pass condition |
+|---|---|---|---|
+| Docker Build | Image build thành công từ Dockerfile multi-stage | `docker build -t <repo>:<sha> .` | Build exit 0, image size trong ngưỡng cho phép |
+| Trivy scan (HIGH/CRITICAL) | Lỗ hổng CVE trong OS package + dependency lib trong image | `trivy image --severity HIGH,CRITICAL --exit-code 1 <image>` | 0 vulnerability mức HIGH/CRITICAL (theo bảng §2.1) |
+| Gitleaks secret scan | Secret/credential bị commit nhầm vào code (API key, token, password) | `gitleaks detect --source . --exit-code 1` | 0 secret phát hiện (theo mục 6: block merge if secret detected) |
+| Build validation | Image chạy được, entrypoint đúng, không crash khi start | `docker run --rm <image> --healthcheck` hoặc smoke run local | Container start, healthcheck endpoint trả 200 |
+| Push image artifact | Đẩy image tạm vào registry nội bộ (chưa phải ECR chính thức) | `docker push <internal-registry>/<repo>:<sha>` | Push thành công, digest được ghi lại để dùng lại ở các Stage sau (không build lại) |
+
+**Step 03: Dev Deployment**
+
+| Job | Check gì | Tool / Lệnh | Pass condition |
+|---|---|---|---|
+| Push image to ECR | Đẩy image chính thức (đã pass scan) lên AWS ECR | `aws ecr get-login-password \| docker login` → `docker push <ecr-uri>:<sha>` | Image tồn tại trên ECR với đúng tag/digest |
+| ArgoCD AppSet deploy | Tạo/cập nhật Application trong ArgoCD theo ApplicationSet pattern cho namespace Sandbox | `kubectl apply -f appset-sandbox.yaml` hoặc ArgoCD tự generate qua Git generator | ApplicationSet tạo Application object thành công, status `Healthy` |
+| ArgoCD sync to DEV | Đồng bộ manifest mới nhất vào cluster Sandbox | `argocd app sync <app-name>` (hoặc auto-sync) | App status = `Synced` + `Healthy` |
+| Smoke test on DEV | Service sống, endpoint cơ bản phản hồi | `curl -f http://<dev-endpoint>/health` script | HTTP 200, response time < ngưỡng |
+
+---
+
+#### STAGE 2: STAGING (GitOps Pre-Prod)
+
+> Trigger: merge vào `develop`, `release/*`, `hotfix/*`. Đây là cổng kỹ nhất trước Production.
+
+**Step 01: Pre-Check**
+
+| Job | Check gì | Tool / Lệnh | Pass condition |
+|---|---|---|---|
+| Lineage verification | Image deploy đúng là image đã build ở Stage 1 (không bị tamper/build lại) | So sánh digest SHA256 lưu ở Step 02 Stage 1 với digest hiện tại trên ECR (`aws ecr describe-images`) | Digest khớp 100% |
+| Trivy review | Review lại kết quả scan trước đó, kiểm tra có CVE mới phát hiện (zero-day) từ database update | `trivy image --severity HIGH,CRITICAL <image>` (re-run với DB mới nhất) | Không phát sinh CVE mới mức HIGH/CRITICAL |
+| Contract freeze | API/schema contract giữa các service không đổi đột ngột (breaking change) | Schema diff tool, ví dụ `openapi-diff` hoặc Pact contract testing | Không có breaking change, hoặc breaking change được approve riêng |
+| Policy validation | Manifest K8s tuân thủ policy tổ chức (resource limit, no root user, no privileged...) | OPA/Conftest: `conftest test deployment.yaml -p policy/` hoặc Kyverno admission policy | 0 policy violation |
+
+**Step 02: Hardening**
+
+| Job | Check gì | Tool / Lệnh | Pass condition |
+|---|---|---|---|
+| Re-tag image | Gắn tag môi trường staging cho image (không build lại) | `crane tag <ecr-uri>@<digest> staging-<sha>` hoặc `docker tag` + push | Tag mới tồn tại, trỏ đúng digest gốc |
+| Full Trivy scan | Quét toàn bộ mức độ (kể cả LOW/MEDIUM), bao gồm cả OS, lib, license issue | `trivy image --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL <image>` | Báo cáo đầy đủ được lưu, không có CRITICAL chưa được waive |
+| Cosign signing | Ký số image để đảm bảo toàn vẹn & nguồn gốc (supply chain security) | `cosign sign --key <kms-key> <image-digest>` | Signature được tạo và verify được bằng `cosign verify` |
+| SBOM generation | Sinh danh sách đầy đủ thành phần phần mềm (package, version, license) trong image | `syft <image> -o spdx-json > sbom.json` hoặc `trivy sbom` | File SBOM hợp lệ, được attach vào image qua `cosign attach sbom` |
+| Store security evidence | Lưu lại scan report, SBOM, chữ ký vào nơi audit được | Upload S3 (`s3://tf1-cdo05-evidence/`) hoặc artifact registry | File evidence có timestamp, gắn với commit SHA |
+
+**Step 03: GitOps Deploy**
+
+| Job | Check gì | Tool / Lệnh | Pass condition |
+|---|---|---|---|
+| Update GitOps repo | Commit manifest mới (image tag, config) vào "config repo" riêng | `yq`/`kustomize edit set image` rồi `git commit && git push` vào repo Kustomize overlay staging | Commit thành công, PR/merge vào branch tương ứng |
+| ArgoCD detect changes | ArgoCD tự động phát hiện diff giữa Git state và cluster state | ArgoCD poll Git mỗi 3 phút (theo mục 3.3) hoặc webhook trigger ngay | Diff được detect, Application chuyển sang `OutOfSync` |
+| Kubernetes rollout | Áp dụng manifest mới, theo đúng sync wave (mục 3.2: Namespace → Platform → AI Engine → Worker → Observability) | ArgoCD `sync` theo annotation `argocd.argoproj.io/sync-wave` | Tất cả wave sync xong tuần tự, không lỗi |
+| Deploy verification | Pod mới chạy đúng, readiness/liveness probe pass | `kubectl rollout status deployment/<name> -n triage-hub-staging` | Rollout status = "successfully rolled out" |
+
+**Step 04: Testing**
+
+| Job | Check gì | Tool / Lệnh | Pass condition |
+|---|---|---|---|
+| Health check | Endpoint `/health`, `/ready` trả về đúng | `curl -f <staging-url>/health` | HTTP 200 |
+| Smoke test | Các luồng nghiệp vụ cơ bản nhất hoạt động | Script test ngắn (login, ping API chính) | Tất cả case cơ bản pass |
+| Integration test | Service tích hợp đúng với DB, queue, service khác trong staging thật | `pytest -m integration --env=staging` | Pass 100%, không lỗi kết nối |
+| E2E test | Luồng người dùng đầy đủ từ đầu đến cuối (UI hoặc API chain) | Playwright/Cypress hoặc Postman/Newman collection | Tất cả scenario E2E pass |
+| Performance test | Latency, throughput đạt SLO đề ra (liên kết NFR ở `01_requirements_analysis.md`) | k6 / Locust load test: `k6 run perf-test.js` | P99 latency, error rate trong ngưỡng SLO đã định |
+
+---
+
+#### STAGE 3: PRODUCTION (Canary)
+
+> Trigger: merge vào `main` **+ manual approval bắt buộc** (theo bảng §5).
+
+**Step 01: Pre-Prod Verify**
+
+| Job | Check gì | Tool / Lệnh | Pass condition |
+|---|---|---|---|
+| Cosign verification | Xác minh chữ ký đã ký ở Stage 2 còn hợp lệ, image chưa bị thay đổi | `cosign verify --key <kms-pubkey> <image-digest>` | Signature valid |
+| Image digest validation | Digest deploy trùng khớp digest đã qua toàn bộ pipeline (no rebuild, no substitution) | So khớp digest lưu trong GitOps manifest với digest trên ECR | Digest khớp 100% |
+| Compliance checks | Đáp ứng yêu cầu compliance nội bộ (security baseline, change approval record) | Checklist tự động hoặc policy-as-code (OPA) đối chiếu evidence đã lưu ở Stage 2 | Tất cả checklist item pass |
+
+**Step 02: Promote Artifact**
+
+| Job | Check gì | Tool / Lệnh | Pass condition |
+|---|---|---|---|
+| Re-tag image | Gắn tag production chính thức (ví dụ `prod-vX.Y.Z`) cho cùng digest | `crane tag <ecr-uri>@<digest> prod-<version>` | Tag mới trỏ đúng digest gốc |
+| Update metadata | Cập nhật thông tin version, commit SHA, người approve, thời gian deploy | Ghi vào release tracking (DynamoDB table `audit index` hoặc tag Git release) | Metadata đầy đủ, truy vết được |
+| Store deploy evidence | Lưu bằng chứng triển khai phục vụ audit sau này | Upload log + approval record lên S3 evidence bucket | Evidence lưu thành công, có timestamp + actor |
+
+**Step 03: Canary Deploy**
+
+| Job | Check gì | Tool / Lệnh | Pass condition |
+|---|---|---|---|
+| Progressive rollout | Tăng dần traffic theo bước: 10% → 50% → 100% (Argo Rollouts canary steps, mục 4.1) | `Rollout` CRD với `strategy.canary.steps` định nghĩa weight + pause | Mỗi step pass AnalysisRun trước khi qua step kế tiếp |
+| Monitoring | Theo dõi metric real-time trong lúc canary chạy: error rate (5xx), P99 latency, AI confidence avg | Argo Rollouts `AnalysisTemplate` query Prometheus (theo abort criteria mục 4.1: error >0.5%, P99 >1000ms, AI confidence <0.5) | Metric trong ngưỡng cho phép suốt thời gian pause |
+| Auto rollback | Nếu vi phạm abort criteria ở bất kỳ step nào, tự động dừng và rollback | Argo Rollouts tự `abort` + scale down canary pods, traffic shift về phiên bản cũ | Rollback hoàn tất trong RTO < 60s (mục 4.2), traffic 100% về stable version |
+
+---
+
+#### Tổng kết liên kết với các mục khác trong tài liệu
+
+- **Quality gate tổng quan** ở bảng §2.1 chính là gộp lại các Job chi tiết trên theo từng Stage tool tương ứng (GitHub Actions, Trivy+Gitleaks, Terraform plan, ArgoCD/Terraform, Custom script).
+- **Secrets** dùng trong các Job trên (đăng nhập ECR, KMS key ký Cosign, query Prometheus...) đều qua OIDC + IAM assume-role TTL 15 phút, không dùng static key (mục 6).
+- **Sync wave** (mục 3.2) là cơ sở cho thứ tự rollout trong Job "Kubernetes rollout" ở Stage 2.
+- **Abort criteria & Rollback** (mục 4.1-4.2) chính là logic chi tiết của Job "Auto rollback" ở Stage 3.
+
 ### 2.2 Branch strategy
 
 - `main` = production-ready (Deploy to Prod namespace, manual approval required).
 - `develop`, `release/*`, `hotfix/*` = integration / pre-prod (Deploy to Staging namespace, auto-sync).
 - `feat/*`, `bugfix/*` = feat/fix branches (Deploy to Sandbox namespace, auto-sync).
 - PR required for merge to `main` + approval, strict status checks (Trivy scan, test coverage).
+
+### 2.3 Mapping CI/CD Pipeline to Repository Structure
+
+Thiết kế lý thuyết ở mục 2.1 được map trực tiếp với mã nguồn thực tế trong repo như sau:
+
+#### 1. CI/CD Workflows (GitHub Actions)
+Đảm nhiệm **Step 01 (Validation)**, **Step 02 (Build & Security)**, và một phần **Step 03 (GitOps Deploy)**.
+- **`.github/workflows/sandbox-*.yaml`**: Map với **Stage 1**. Lắng nghe sự kiện push vào `feat/**` hoặc `develop`, thực hiện build Docker, push lên ECR và tự động cập nhật image tag bằng Kustomize vào môi trường sandbox.
+- *(Tương tự cho các file workflow staging/prod nếu có trong tương lai để phục vụ Stage 2 và Stage 3).*
+
+#### 2. GitOps Configuration (Mục tiêu của ArgoCD)
+Đảm nhiệm phần **Deployment** trên Kubernetes, quản lý hoàn toàn bằng Kustomize.
+- **`manifests/base/`**: Cấu hình Kubernetes cốt lõi (Deployments, Services) dùng chung cho tất cả các môi trường.
+- **`manifests/overlays/sandbox/`**: Map với **Stage 1 (DEVELOPER)**. Chứa cấu hình cụ thể cho Sandbox. CI Pipeline sẽ tự động commit sửa file `kustomization.yaml` ở đây để ArgoCD nhận diện image mới.
+- **`manifests/overlays/staging/`**: Map với **Stage 2 (STAGING)**. 
+- **`manifests/overlays/prod/`**: Map với **Stage 3 (PRODUCTION)**. Nơi chứa cấu hình Argo Rollouts (Canary Deployment 10% → 100%).
+
+#### 3. ArgoCD Application Specs
+- **`manifests/argocd/`**: Chứa các khai báo `Application` hoặc `ApplicationSet` của ArgoCD để trỏ về các thư mục `overlays/` ở trên và đồng bộ (sync) vào Kubernetes Cluster.
 
 ## 3. GitOps
 
@@ -107,7 +251,7 @@ PR opened ──► Build ──► Test ──► Scan ──► Plan ──►
 ## 5. Environment separation
 
 | Env     | Purpose                             | Account / Namespace  | Auto-deploy                                   |
-| ------- | ----------------------------------- | -------------------- | --------------------------------------------- |
+| ------- | ------------------------------------ | --------------------- | ---------------------------------------------- |
 | Sandbox | Dev experimentation                 | `triage-hub-sandbox` | On push to `feat/*`, `bugfix/*`            |
 | Staging | Pre-prod integration                | `triage-hub-staging` | On push to `develop`, `release/*`, `hotfix/*` |
 | Prod    | Real tenant traffic (Demo capstone) | `triage-hub-prod`    | On merge to `main` + manual approval          |
@@ -134,7 +278,7 @@ Total time target: < 30 min.
 ## 8. Observability stack
 
 | Component  | Tool                                               |
-| ---------- | -------------------------------------------------- |
+| ---------- | --------------------------------------------------- |
 | Metrics    | Prometheus (in-cluster) / CloudWatch               |
 | Logs       | Fluent Bit → CloudWatch Logs / S3 cho cold storage |
 | Traces     | OpenTelemetry → AWS X-Ray                          |
