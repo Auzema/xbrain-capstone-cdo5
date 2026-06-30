@@ -35,6 +35,23 @@ jobs:
         working-directory: ${{ inputs.tf_working_dir }}
         run: terraform init
 
+      - name: Terraform Plan
+        working-directory: ${{ inputs.tf_working_dir }}
+        run: terraform plan -out=tfplan -no-color
+
+      - name: Export Plan to JSON
+        working-directory: ${{ inputs.tf_working_dir }}
+        run: terraform show -json tfplan > plan.json
+
+      - name: Setup Conftest
+        uses: open-policy-agent/setup-conftest@v1
+        with:
+          version: "latest"
+
+      - name: OPA Contract Testing
+        working-directory: ${{ inputs.tf_working_dir }}
+        run: conftest test plan.json -p ../../../contracts/opa/prerequisites.rego
+
       - name: Terraform Apply
         working-directory: ${{ inputs.tf_working_dir }}
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve tfplan

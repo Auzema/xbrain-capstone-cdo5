@@ -47,8 +47,21 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: ${{ inputs.tf_working_dir }}
-        run: terraform plan -no-color
+        run: terraform plan -out=tfplan -no-color
         continue-on-error: true
+
+      - name: Export Plan to JSON
+        working-directory: ${{ inputs.tf_working_dir }}
+        run: terraform show -json tfplan > plan.json
+
+      - name: Setup Conftest
+        uses: open-policy-agent/setup-conftest@v1
+        with:
+          version: "latest"
+
+      - name: OPA Contract Testing
+        working-directory: ${{ inputs.tf_working_dir }}
+        run: conftest test plan.json -p ../../../contracts/opa/prerequisites.rego
 
       - name: Comment PR
         uses: actions/github-script@v7
