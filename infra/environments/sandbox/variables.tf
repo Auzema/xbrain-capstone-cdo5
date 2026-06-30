@@ -1,6 +1,6 @@
 variable "project" {
-  type    = string
-  default = "xbrain-cdo5"
+  type        = string
+  description = "Project name prefix used for all resource naming"
 }
 
 variable "environment" {
@@ -13,12 +13,9 @@ variable "aws_region" {
 }
 
 variable "tags" {
-  type = map(string)
-  default = {
-    Project     = "xbrain-cdo5"
-    Environment = "sandbox"
-    ManagedBy   = "Terraform"
-  }
+  type        = map(string)
+  description = "Tags applied to all resources. Auto-generated from project and environment if not provided."
+  default     = {}
 }
 
 variable "vpc_cidr" {
