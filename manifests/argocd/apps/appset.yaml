@@ -112,9 +112,9 @@ spec:
         path: "manifests/overlays/sandbox" # Dùng cấu hình sandbox làm nền
         kustomize:
           images:
-            - "platform-service=458580846647.dkr.ecr.ap-southeast-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-platform-service:pr-{{.number}}"
-            - "ai-engine=458580846647.dkr.ecr.ap-southeast-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-ai-engine:pr-{{.number}}"
-            - "simulator=458580846647.dkr.ecr.ap-southeast-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-simulator:pr-{{.number}}"
+            - "platform-service=458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-platform-service:pr-{{.number}}"
+            - "ai-engine=458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-ai-engine:pr-{{.number}}"
+            - "simulator=458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-simulator:pr-{{.number}}"
       destination:
         server: "https://kubernetes.default.svc"
         namespace: "xbrain-cdo5-pr-{{.number}}"
