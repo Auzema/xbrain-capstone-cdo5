@@ -31,18 +31,29 @@ infra/
 
 ### 1.3 State management
 
-- Remote state per environment: `sandbox/terraform.tfstate`, `staging/terraform.tfstate`, `prod/terraform.tfstate`.
-- State lock via DynamoDB (`tf1-cdo05-tflock`, hash key = `LockID`) với Consistent Read.
-- Plan-on-PR + apply-on-merge gate:
-  - `terraform plan` tự động chạy và comment trên PR.
-  - Tự động apply trên sandbox khi push, tự động apply trên staging khi merge, cần manual approve cho prod.
+- **Remote State Backend**: Lưu trữ state tập trung trên Amazon S3 (`bucket = "xbrain-capstone-cdo5-{env}-i-tfstate"`, `region = "us-east-1"`). Mỗi môi trường (`sandbox`, `staging`, `prod`) sử dụng một state key riêng biệt (`{env}/terraform.tfstate`) để cô lập hoàn toàn phạm vi ảnh hưởng (blast radius).
+- **State Locking (Cơ chế khóa trạng thái)**: Sử dụng tính năng **Native S3 State Locking (`use_lockfile = true`)** của Terraform v1.7+ thay thế cho DynamoDB Lock Table truyền thống. Cơ chế này tận dụng trực tiếp tính năng concurrency control của S3 để ngăn chặn race condition (nhiều user/pipeline cùng chạy `apply` một lúc) mà không tốn chi phí quản lý DynamoDB.
+- **Bảo mật (Security)**:
+  - Bật mã hóa phía máy chủ (`encrypt = true`) để bảo vệ các thông tin nhạy cảm (secrets, credentials) trong file state.
+  - Phân quyền IAM tối giản (least privilege) thông qua GitHub OIDC: GitHub runner chỉ có quyền đọc/ghi vào bucket chứa state và thực thi lockfile.
+
 
 ## 2. CI/CD pipeline
 
-### 2.1 Pipeline stages
+### 2.1 Phạm vi áp dụng & Quyền sở hữu (Scope & Ownership)
+
+Để làm rõ trách nhiệm triển khai và vận hành của nhóm CDO-05 đối với từng cấu phần:
+
+*   **Correlator Worker (`apps/platform-service`)**: Thành phần cốt lõi của dự án do **CDO-05 sở hữu toàn bộ luồng CI** (chạy test, lint, typecheck, build image, scan Trivy/Gitleaks) và **CD** (đồng bộ GitOps thông qua Kustomize overlays và ArgoCD).
+*   **Ingest Lambda (`apps/ingest-lambda`)**: Được CI/CD trực tiếp trong luồng Infra Pipeline thông qua Terraform (đóng gói zip file của source Python và deploy lên AWS Lambda).
+*   **AI Engine (`apps/ai-engine`)**: **Do AI Team sở hữu phần mã nguồn và luồng CI riêng**. Nhóm CDO-05 không quản lý mã nguồn của AI Engine mà chỉ chịu trách nhiệm **cấu hình hạ tầng CD** (tạo Helm Chart/Argo Rollouts manifest để deploy và quản lý rollout strategy canary trên cụm EKS).
+*   **Simulator (`apps/simulator`)**: Chỉ đóng vai trò giả lập sinh alert/event để test trên môi trường sandbox.
+
+### 2.2 Pipeline stages
 
 **Hierarchical CI/CD Architecture (Detailed):**
 ![Detailed CI/CD Pipeline](assets/pipeline-cicd.drawio.png)
+
 
 ```text
 PR opened ──► Build ──► Test ──► Scan ──► Plan ──► Review ──► Merge ──► Apply ──► Smoke test
@@ -57,7 +68,7 @@ PR opened ──► Build ──► Test ──► Scan ──► Plan ──►
 | Apply | ArgoCD / Terraform | Deploy K8s manifests / deploy infra                        | Healthy & Synced / Apply success  |
 | Smoke | Custom script      | K8s Job health check post-deploy / policy validation       | All endpoints 200, valid response |
 
-### 2.1.1 Giải thích chi tiết luồng Hierarchical CI/CD (3 Stage)
+### 2.2.1 Giải thích chi tiết luồng Hierarchical CI/CD (3 Stage)
 
 Pipeline gồm **3 Stage → mỗi Stage nhiều Step → mỗi Step nhiều Job nhỏ**. Dưới đây là chi tiết từng Job: kiểm tra cái gì, dùng tool nào, lệnh/cấu hình tham khảo, điều kiện pass/fail.
 
@@ -181,16 +192,16 @@ Pipeline gồm **3 Stage → mỗi Stage nhiều Step → mỗi Step nhiều Job
 - **Sync wave** (mục 3.2) là cơ sở cho thứ tự rollout trong Job "Kubernetes rollout" ở Stage 2.
 - **Abort criteria & Rollback** (mục 4.1-4.2) chính là logic chi tiết của Job "Auto rollback" ở Stage 3.
 
-### 2.2 Branch strategy
+### 2.3 Branch strategy
 
 - `main` = production-ready (Deploy to Prod namespace, manual approval required).
 - `develop`, `release/*`, `hotfix/*` = integration / pre-prod (Deploy to Staging namespace, auto-sync).
 - `feat/*`, `bugfix/*` = feat/fix branches (Deploy to Sandbox namespace, auto-sync).
 - PR required for merge to `main` + approval, strict status checks (Trivy scan, test coverage).
 
-### 2.3 Mapping CI/CD Pipeline to Repository Structure
+### 2.4 Mapping CI/CD Pipeline to Repository Structure
 
-Thiết kế lý thuyết ở mục 2.1 được map trực tiếp với mã nguồn thực tế trong repo như sau:
+Thiết kế lý thuyết ở mục 2.2 được map trực tiếp với mã nguồn thực tế trong repo như sau:
 
 #### 1. CI/CD Workflows (GitHub Actions)
 Đảm nhiệm **Step 01 (Validation)**, **Step 02 (Build & Security)**, và một phần **Step 03 (GitOps Deploy)**.
@@ -277,13 +288,14 @@ Total time target: < 30 min.
 
 ## 8. Observability stack
 
-| Component  | Tool                                               |
-| ---------- | --------------------------------------------------- |
-| Metrics    | Prometheus (in-cluster) / CloudWatch               |
-| Logs       | Fluent Bit → CloudWatch Logs / S3 cho cold storage |
-| Traces     | OpenTelemetry → AWS X-Ray                          |
-| Dashboards | Grafana (SLO, cost tracking, AI health)            |
-| Alerts     | Prometheus Alertmanager → SNS → Slack              |
+| Component  | Tool                                                                                                                         |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Metrics    | Prometheus (in-cluster workloads) / CloudWatch Metrics (AWS managed services like Lambda, SQS, DynamoDB)                     |
+| Logs       | Loki (in-cluster workloads via Loki Agent/Fluent Bit) + CloudWatch Logs (AWS services & EKS system logs via CloudWatch Agent)|
+| Traces     | OpenTelemetry → AWS X-Ray                                                                                                    |
+| Dashboards | Grafana (SLO, cost tracking, AI health - unified queries from Prometheus, Loki, CloudWatch)                                 |
+| Alerts     | Prometheus Alertmanager (workloads) + CloudWatch Alarms (AWS resources) → SNS → Slack                                        |
+
 
 ## 9. Open questions
 
