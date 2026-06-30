@@ -47,7 +47,7 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: ${{ inputs.tf_working_dir }}
-        run: terraform plan -out=tfplan -no-color
+        run: terraform plan -out=tfplan -input=false -no-color
         continue-on-error: true
 
       - name: Export Plan to JSON
