@@ -52,7 +52,7 @@ infra/
 ### 2.2 Pipeline stages
 
 **Hierarchical CI/CD Architecture (Detailed):**
-![Detailed CI/CD Pipeline](assets/diagram_cicd-CI-CD-pipline.drawio%20(1).png)
+![Detailed CI/CD Pipeline](assets/diagram_cicd-CI-CD-pipline.drawio%20(2).png)
 
 
 ```text
@@ -142,7 +142,6 @@ Pipeline gồm **3 Stage → mỗi Stage nhiều Step → mỗi Step nhiều Job
 |---|---|---|---|
 | Health check | Endpoint `/health`, `/ready` trả về đúng | `curl -f <staging-url>/health` | HTTP 200 |
 | Integration test | Service tích hợp đúng với các thành phần khác | `pytest -m integration` | Pass 100%, không lỗi kết nối |
-| E2E test | Luồng người dùng đầy đủ từ đầu đến cuối | Playwright/Cypress | Tất cả scenario E2E pass |
 | Performance test | Latency, throughput đạt SLO đề ra | k6 / Locust load test | P99 latency, error rate trong ngưỡng SLO |
 
 ---
