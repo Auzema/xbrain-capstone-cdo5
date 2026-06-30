@@ -113,7 +113,7 @@ terraform apply    # Áp dụng
 │   └── build-push-ecr/        # Module Build → Trivy → Push → Cosign (dùng vars.*)
 └── workflows/
     ├── ci-*.yml               # CI: Test → Build → Scan → Sign → CD Update
-    ├── cd-update-argocd.yml   # CD: Cập nhật Kustomize manifest
+    ├── _reusable-update-argocd.yml   # CD: Cập nhật Kustomize manifest
     ├── promote-to-prod.yml    # Promote: Retag image Staging → Prod (Crane)
     ├── pr-security-scan.yml   # PR: Gitleaks secret scan
     ├── infra-plan.yml         # IaC: Terraform Plan trên PR
