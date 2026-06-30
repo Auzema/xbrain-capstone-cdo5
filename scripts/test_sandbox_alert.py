@@ -80,11 +80,11 @@ def main():
             MessageGroupId=message_group_id,
             MessageDeduplicationId=message_deduplication_id
         )
-        print(f"✅ Message successfully sent to SQS.")
+        print(f"[SUCCESS] Message successfully sent to SQS.")
         print(f"Message ID: {response.get('MessageId')}")
-        print("\n⏳ Now check the logs of tf1-platform-service and tf1-ai-engine on your Kubernetes cluster.")
+        print("\n[INFO] Now check the logs of tf1-platform-service and tf1-ai-engine on your Kubernetes cluster.")
     except Exception as e:
-        print(f"❌ Failed to send message to SQS: {e}")
+        print(f"[ERROR] Failed to send message to SQS: {e}")
 
 if __name__ == "__main__":
     main()
