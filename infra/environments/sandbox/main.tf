@@ -5,7 +5,7 @@ data "aws_caller_identity" "current" {}
 
 locals {
   prefix         = "${var.project}-${var.environment}"
-  tfstate_bucket = "${var.project}-capstone-cdo5-${var.environment}-i-tfstate"
+  tfstate_bucket = "xbrain-capstone-cdo5-${var.environment}-i-tfstate"
   tags = merge(
     {
       Project     = var.project
