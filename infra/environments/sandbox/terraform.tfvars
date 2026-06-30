@@ -6,4 +6,4 @@ public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
 private_subnet_cidrs = ["10.0.3.0/24", "10.0.4.0/24"]
 cluster_version      = "1.31"
 admin_role_arn       = "arn:aws:iam::458580846647:role/me-dangnhatminh-github"
-devops_team_role_arn = "arn:aws:iam::458580846647:role/AWSReservedSSO_xbrain-devops-perm_e37cbb9da67f91a5"
+devops_team_role_arn = "arn:aws:iam::458580846647:role/aws-reserved/sso.amazonaws.com/ap-southeast-1/AWSReservedSSO_xbrain-devops-perm_e37cbb9da67f91a5"
