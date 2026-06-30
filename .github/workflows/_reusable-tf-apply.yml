@@ -35,13 +35,11 @@ jobs:
         working-directory: ${{ inputs.tf_working_dir }}
         run: terraform init
 
-      - name: Terraform Plan
-        working-directory: ${{ inputs.tf_working_dir }}
-        run: terraform plan -out=tfplan -input=false -no-color
-
-      - name: Export Plan to JSON
-        working-directory: ${{ inputs.tf_working_dir }}
-        run: terraform show -json tfplan > plan.json
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ inputs.environment }}
+          path: ${{ inputs.tf_working_dir }}
 
       - name: Terraform Apply
         working-directory: ${{ inputs.tf_working_dir }}

@@ -53,7 +53,6 @@ jobs:
 
   plan:
     needs: determine-env
-    if: github.event_name == 'pull_request'
     uses: ./.github/workflows/_reusable-tf-plan.yml
     with:
       environment: ${{ needs.determine-env.outputs.env_name }}
@@ -61,7 +60,7 @@ jobs:
     secrets: inherit
 
   apply:
-    needs: determine-env
+    needs: [determine-env, plan]
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/_reusable-tf-apply.yml
     with:

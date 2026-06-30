@@ -74,60 +74,9 @@ module "external_secrets" {
 
   depends_on = [module.eks]
 }
-
-module "github_oidc" {
-  source = "../../modules/github-oidc"
-
-  role_name          = "${local.prefix}-ci"
-  policy_name        = "${local.prefix}-ci-policy"
-  policy_description = "Policy for CI/CD role to push images to ECR"
-  github_repos       = [var.github_repo]
-  tags               = local.tags
-
-  policy_json = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "ecr:GetAuthorizationToken",
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage",
-          "ecr:InitiateLayerUpload",
-          "ecr:UploadLayerPart",
-          "ecr:CompleteLayerUpload",
-          "ecr:PutImage"
-        ]
-        Resource = "*"
-      },
-      {
-        Sid      = "EKSDescribe"
-        Effect   = "Allow"
-        Action   = ["eks:DescribeCluster", "eks:ListClusters"]
-        Resource = "*"
-      },
-      {
-        Sid    = "TerraformStateS3"
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject",
-          "s3:ListBucket"
-        ]
-        Resource = [
-          "arn:${data.aws_partition.current.partition}:s3:::${local.tfstate_bucket}",
-          "arn:${data.aws_partition.current.partition}:s3:::${local.tfstate_bucket}/*"
-        ]
-      }
-    ]
-  })
-}
-
 module "ecr" {
   source       = "../../modules/ecr"
-  ci_role_arn  = module.github_oidc.role_arn
+  ci_role_arn  = "arn:aws:iam::458580846647:role/me-dangnhatminh-github"
   tags         = local.tags
   repositories = var.ecr_repositories
   project      = var.project

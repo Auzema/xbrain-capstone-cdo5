@@ -74,8 +74,8 @@ module "eks" {
         principal_arn = var.backend_devs_role_arn
         policy_associations = {
           view_access = {
-            policy_arn   = "arn:${data.aws_partition.current.partition}:eks::aws:cluster-access-policy/AmazonEKSViewPolicy"
-            access_scope = { 
+            policy_arn = "arn:${data.aws_partition.current.partition}:eks::aws:cluster-access-policy/AmazonEKSViewPolicy"
+            access_scope = {
               type       = "namespace"
               namespaces = ["sandbox", "staging", "prod"]
             }

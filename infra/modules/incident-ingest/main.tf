@@ -79,7 +79,7 @@ resource "aws_lambda_function_url" "ingest_webhook_url" {
 }
 
 resource "aws_lambda_permission" "public_invoke" {
-  statement_id           = "FunctionURLAllowPublicAccess"
+  statement_id           = "FunctionURLAllowPublicAccessV2"
   action                 = "lambda:InvokeFunctionUrl"
   function_name          = aws_lambda_function.ingest_lambda.function_name
   principal              = "*"
