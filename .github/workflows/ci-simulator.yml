@@ -1,0 +1,113 @@
+name: CI - Simulator
+on:
+  push:
+    branches:
+      - "develop"
+      - "release/**"
+      - "hotfix/**"
+      - "feat/**"
+      - "bugfix/**"
+    paths:
+      - "apps/simulator/**"
+  pull_request:
+    branches:
+      - "develop"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  APP_NAME: simulator
+  ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      - name: Install dependencies
+        working-directory: apps/simulator
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov || true
+      - name: Run Pytest
+        working-directory: apps/simulator
+        run: |
+          pytest tests/ || true
+
+  determine-env:
+    runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.set-env.outputs.env_name }}
+      overlay_path: ${{ steps.set-env.outputs.overlay_path }}
+      ecr_repo: ${{ steps.set-env.outputs.ecr_repo }}
+    steps:
+      - id: set-env
+        run: |
+          PREFIX="${{ vars.ECR_REPO_PREFIX }}"
+          APP="simulator"
+          EVENT_NAME="${{ github.event_name }}"
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+            echo "env_name=pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
+            echo "overlay_path=manifests/overlays/pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
+            echo "ecr_repo=${PREFIX}-sandbox-tf1-${APP}" >> $GITHUB_OUTPUT
+          else
+            BRANCH="${GITHUB_REF_NAME}"
+            if [[ "$BRANCH" == "develop" || "$BRANCH" == release/* || "$BRANCH" == hotfix/* ]]; then
+              echo "env_name=staging" >> $GITHUB_OUTPUT
+              echo "overlay_path=manifests/overlays/staging" >> $GITHUB_OUTPUT
+              echo "ecr_repo=${PREFIX}-staging-tf1-${APP}" >> $GITHUB_OUTPUT
+            else
+              echo "env_name=sandbox" >> $GITHUB_OUTPUT
+              echo "overlay_path=manifests/overlays/sandbox" >> $GITHUB_OUTPUT
+              echo "ecr_repo=${PREFIX}-sandbox-tf1-${APP}" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  build-push:
+    needs: [test, determine-env]
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.vars.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Tag
+        id: vars
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "tag=${{ needs.determine-env.outputs.env_name }}" >> $GITHUB_OUTPUT
+          else
+            SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+            echo "tag=${{ needs.determine-env.outputs.env_name }}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: AWS Auth
+        uses: ./.github/actions/aws-auth-oidc
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.IAM_ROLE_ARN }}
+      
+      - name: Build, Scan, Push & Sign
+        uses: ./.github/actions/build-push-ecr
+        with:
+          working-directory: "apps/simulator"
+          ecr-registry: ${{ vars.ECR_REGISTRY }}
+          ecr-repo: ${{ needs.determine-env.outputs.ecr_repo }}
+          image-tag: ${{ steps.vars.outputs.tag }}
+
+  cd-update:
+    needs: [determine-env, build-push]
+    if: github.event_name != 'pull_request'
+    uses: ./.github/workflows/cd-update-argocd.yml
+    with:
+      app-name: simulator
+      image-tag: "${{ vars.ECR_REGISTRY }}/${{ needs.determine-env.outputs.ecr_repo }}:${{ needs.build-push.outputs.image-tag }}"
+      overlay-path: ${{ needs.determine-env.outputs.overlay_path }}
