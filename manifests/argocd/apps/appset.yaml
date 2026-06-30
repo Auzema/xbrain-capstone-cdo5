@@ -46,12 +46,14 @@ metadata:
 spec:
   goTemplate: true
   generators:
-    - list:
-        elements:
-          - env: sandbox
+    - git:
+        repoURL: "https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git"
+        revision: HEAD
+        directories:
+          - path: "manifests/overlays/*"
   template:
     metadata:
-      name: "xbrain-cdo5-{{.env}}"
+      name: "xbrain-cdo5-{{.path.basename}}"
       annotations:
         argocd.argoproj.io/sync-wave: "2"
     spec:
@@ -59,10 +61,10 @@ spec:
       source:
         repoURL: "https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git"
         targetRevision: HEAD
-        path: "manifests/overlays/{{.env}}"
+        path: "{{.path.path}}"
       destination:
         server: "https://kubernetes.default.svc"
-        namespace: "xbrain-cdo5-{{.env}}"
+        namespace: "xbrain-cdo5-{{.path.basename}}"
       syncPolicy:
         syncOptions:
           - CreateNamespace=true
@@ -72,10 +74,58 @@ spec:
           jsonPointers:
             - /status
   templatePatch: |
-    {{- if ne .env "prod" }}
+    {{- if ne .path.basename "prod" }}
     spec:
       syncPolicy:
         automated:
           prune: true
           selfHeal: true
     {{- end }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: xbrain-pr-appset
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - pullRequest:
+        github:
+          owner: me-dangnhatminh
+          repo: xbrain-capstone-cdo5
+          # Token is required to bypass API rate limits and read PRs
+          tokenRef:
+            secretName: github-token
+            key: token
+        requeueAfterSeconds: 180
+  template:
+    metadata:
+      name: "xbrain-cdo5-pr-{{.number}}"
+      annotations:
+        argocd.argoproj.io/sync-wave: "2"
+    spec:
+      project: default
+      source:
+        repoURL: "https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git"
+        targetRevision: "{{.head_sha}}"
+        path: "manifests/overlays/sandbox" # Dùng cấu hình sandbox làm nền
+        kustomize:
+          images:
+            - "platform-service=458580846647.dkr.ecr.ap-southeast-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-platform-service:pr-{{.number}}"
+            - "ai-engine=458580846647.dkr.ecr.ap-southeast-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-ai-engine:pr-{{.number}}"
+            - "simulator=458580846647.dkr.ecr.ap-southeast-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-simulator:pr-{{.number}}"
+      destination:
+        server: "https://kubernetes.default.svc"
+        namespace: "xbrain-cdo5-pr-{{.number}}"
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+        automated:
+          prune: true
+          selfHeal: true
+      ignoreDifferences:
+        - group: external-secrets.io
+          kind: ExternalSecret
+          jsonPointers:
+            - /status

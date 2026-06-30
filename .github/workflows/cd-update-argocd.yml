@@ -1,0 +1,43 @@
+name: Reusable CD Update Manifests
+on:
+  workflow_call:
+    inputs:
+      app-name:
+        required: true
+        type: string
+        description: "Name of the app (e.g. platform-service)"
+      image-tag:
+        required: true
+        type: string
+        description: "The full image tag or just the tag if registry is prepended by Kustomize"
+      overlay-path:
+        required: true
+        type: string
+        description: "Path to the kustomize overlay (e.g. manifests/overlays/sandbox)"
+jobs:
+  update-manifests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+      - name: Update Kustomize & Push to Github
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          cd ${{ inputs.overlay-path }}
+          kustomize edit set image ${{ inputs.app-name }}=${{ inputs.image-tag }}
+          
+          cd -
+          git add ${{ inputs.overlay-path }}/kustomization.yaml
+          
+          if ! git diff --staged --quiet; then
+            git commit -m "🚀 deploy(${{ inputs.app-name }}): update tag [skip ci]"
+            git pull --rebase origin ${{ github.ref_name }}
+            git push origin HEAD:${{ github.ref_name }}
+          else
+            echo "No changes to commit"
+          fi

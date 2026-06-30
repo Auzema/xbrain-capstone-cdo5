@@ -115,3 +115,4 @@ xbrain-capstone-cdo5/
 - [ ] `08_adrs.md` final (≥5 ADRs)
 - [ ] Platform infra deployed + integrated với AI engine
 - [ ] git tag `final`
+ 

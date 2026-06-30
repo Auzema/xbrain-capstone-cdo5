@@ -5,7 +5,15 @@ data "aws_caller_identity" "current" {}
 
 locals {
   prefix         = "${var.project}-${var.environment}"
-  tfstate_bucket = "xbrain-capstone-cdo5-${var.environment}-tfstate"
+  tfstate_bucket = "xbrain-capstone-cdo5-${var.environment}-i-tfstate"
+  tags = merge(
+    {
+      Project     = var.project
+      Environment = var.environment
+      ManagedBy   = "Terraform"
+    },
+    var.tags
+  )
 }
 
 data "aws_availability_zones" "available" {
@@ -17,7 +25,7 @@ module "networking" {
 
   project              = var.project
   environment          = var.environment
-  tags                 = var.tags
+  tags                 = local.tags
   vpc_cidr             = var.vpc_cidr
   public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
@@ -33,7 +41,7 @@ module "eks" {
 
   project     = var.project
   environment = var.environment
-  tags        = var.tags
+  tags        = local.tags
 
   vpc_id     = module.networking.vpc_id
   subnet_ids = module.networking.private_subnet_ids
@@ -44,6 +52,7 @@ module "eks" {
   admin_role_arn        = coalesce(var.admin_role_arn, data.aws_caller_identity.current.arn)
   devops_team_role_arn  = var.devops_team_role_arn
   backend_devs_role_arn = var.backend_devs_role_arn
+  ci_role_arn           = module.github_oidc.role_arn
 
   instance_type  = var.instance_type
   scaling_config = var.eks_scaling_config
@@ -59,7 +68,7 @@ module "external_secrets" {
 
   project               = var.project
   environment           = var.environment
-  tags                  = var.tags
+  tags                  = local.tags
   eks_cluster_name      = module.eks.cluster_name
   eks_oidc_provider_arn = module.eks.oidc_provider_arn
   aws_region            = var.aws_region
@@ -74,7 +83,7 @@ module "github_oidc" {
   policy_name        = "${local.prefix}-ci-policy"
   policy_description = "Policy for CI/CD role to push images to ECR"
   github_repos       = [var.github_repo]
-  tags               = var.tags
+  tags               = local.tags
 
   policy_json = jsonencode({
     Version = "2012-10-17"
@@ -120,7 +129,7 @@ module "github_oidc" {
 module "ecr" {
   source       = "../../modules/ecr"
   ci_role_arn  = module.github_oidc.role_arn
-  tags         = var.tags
+  tags         = local.tags
   repositories = var.ecr_repositories
   project      = var.project
   environment  = var.environment
@@ -130,7 +139,7 @@ module "incident_ingest" {
   source = "../../modules/incident-ingest"
 
   prefix                 = local.prefix
-  tags                   = var.tags
+  tags                   = local.tags
   lambda_source_dir      = "${path.module}/../../../apps/ingest-lambda"
   lambda_zip_output_path = "${path.module}/.temp/ingest_lambda.zip"
   ssm_parameter_prefix   = "/${var.project}/${var.environment}"

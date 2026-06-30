@@ -1,0 +1,51 @@
+name: 'Build, Scan, Push and Sign ECR'
+description: 'Build Docker image, scan with Trivy, push to ECR, and sign with Cosign'
+inputs:
+  working-directory:
+    description: 'Directory where the Dockerfile is located'
+    required: true
+  ecr-registry:
+    description: 'ECR Registry URL'
+    required: true
+  ecr-repo:
+    description: 'ECR Repository Name'
+    required: true
+  image-tag:
+    description: 'Tag to apply to the Docker image'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Build Docker Image
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        IMAGE=${{ inputs.ecr-registry }}/${{ inputs.ecr-repo }}:${{ inputs.image-tag }}
+        docker build -t $IMAGE .
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ inputs.ecr-registry }}/${{ inputs.ecr-repo }}:${{ inputs.image-tag }}
+        format: 'table'
+        exit-code: '1'
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Push Docker Image
+      shell: bash
+      run: |
+        IMAGE=${{ inputs.ecr-registry }}/${{ inputs.ecr-repo }}:${{ inputs.image-tag }}
+        docker push $IMAGE
+
+    - name: Install Cosign
+      uses: sigstore/cosign-installer@v3
+      with:
+        cosign-release: 'v2.2.4'
+
+    - name: Sign the images with Cosign
+      shell: bash
+      run: |
+        IMAGE=${{ inputs.ecr-registry }}/${{ inputs.ecr-repo }}:${{ inputs.image-tag }}
+        cosign sign --yes $IMAGE

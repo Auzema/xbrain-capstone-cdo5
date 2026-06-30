@@ -1,0 +1,33 @@
+name: CI/CD - Ingest Lambda
+on:
+  push:
+    branches:
+      - "develop"
+      - "feat/**"
+    paths:
+      - "apps/ingest-lambda/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  deploy-lambda:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: AWS Auth
+        uses: ./.github/actions/aws-auth-oidc
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.IAM_ROLE_ARN }}
+
+      - name: Zip and Deploy Lambda
+        working-directory: apps/ingest-lambda
+        run: |
+          zip function.zip index.py
+          # Thay thế your_lambda_function_name bằng tên thật của lambda function
+          # aws lambda update-function-code --function-name your_lambda_function_name --zip-file fileb://function.zip
+          echo "Placeholder: Update lambda code here"
