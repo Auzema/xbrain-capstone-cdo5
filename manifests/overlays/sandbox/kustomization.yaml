@@ -25,10 +25,10 @@ configMapGenerator:
 
 images:
 - name: ai-engine
-  newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/tf1-triage-hub-sandbox/ai-engine
-  newTag: latest
+  newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/tf1-ai-engine
+  newTag: dev
 - name: platform-service
-  newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/tf1-triage-hub-sandbox/demo-app
+  newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/tf1-triage-hub-sandbox/platform-service
   newTag: latest
 - name: simulator
   newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/tf1-triage-hub-sandbox/observability-tools
