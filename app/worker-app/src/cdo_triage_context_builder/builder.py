@@ -61,13 +61,14 @@ def build_triage_request(
         "logs": [],
         "traces": [],
         "recent_deploys": [],
-        "ownership": {},
+        "ownership": _ownership_payload(incident, evidence_bundle),
     }
     if evidence_uri:
         request["evidence_uri"] = evidence_uri
 
     if inline_evidence and evidence_bundle is not None:
         _apply_inline_evidence(request, evidence_bundle)
+        request["ownership"] = _ownership_payload(incident, evidence_bundle)
 
     return request
 
@@ -119,6 +120,17 @@ def _apply_inline_evidence(
     ownership = bundle.get("ownership")
     if isinstance(ownership, dict):
         request["ownership"] = deepcopy(ownership)
+
+
+def _ownership_payload(
+    incident: Mapping[str, Any],
+    evidence_bundle: Mapping[str, Any] | None,
+) -> JsonMap:
+    ownership = {}
+    if evidence_bundle is not None and isinstance(evidence_bundle.get("ownership"), dict):
+        ownership = deepcopy(evidence_bundle["ownership"])
+    ownership.setdefault("service", incident["service"])
+    return {key: value for key, value in ownership.items() if not _is_missing(value)}
 
 
 def _received_at(incident: Mapping[str, Any]) -> str:
