@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cdo-worker"
+version = "0.1.0"
+description = "CDO native AWS worker for correlate, evidence bundle, and AIO triage handoff"
+requires-python = ">=3.12"
+dependencies = [
+  "boto3>=1.34",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+
+[project.scripts]
+cdo-correlate = "cdo_correlator.cli:main"
+cdo-build-evidence = "cdo_evidence_builder.cli:main"
+cdo-build-triage-context = "cdo_triage_context_builder.cli:main"
+cdo-worker = "cdo_worker.worker:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
