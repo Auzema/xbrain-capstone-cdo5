@@ -1,0 +1,14 @@
+{
+  "service": "book-service",
+  "owner_team": "team-book",
+  "slack_channel": "#oncall-book",
+  "jira_project": "BOOK",
+  "jira_component": "book-service",
+  "runbooks": [
+    {
+      "title": "High 5xx rate on book-service runbook",
+      "url": "runbook://book-service/high-5xx",
+      "excerpt": "Check database connection limits and scaling settings. Revert back to previous deployment version if latency persists."
+    }
+  ]
+}
