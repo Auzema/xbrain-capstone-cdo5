@@ -35,11 +35,9 @@ jobs:
         working-directory: ${{ inputs.tf_working_dir }}
         run: terraform init
 
-      - name: Download Terraform Plan
-        uses: actions/download-artifact@v4
-        with:
-          name: tfplan-${{ inputs.environment }}
-          path: ${{ inputs.tf_working_dir }}
+      - name: Load Terraform Plan Locally
+        run: |
+          cp /tmp/tfplans/${{ github.run_id }}-${{ inputs.environment }}/tfplan ${{ inputs.tf_working_dir }}/tfplan
 
       - name: Terraform Apply
         working-directory: ${{ inputs.tf_working_dir }}
