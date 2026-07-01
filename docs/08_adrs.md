@@ -12,9 +12,9 @@
 | ADR-001 | Compute target — EKS over ECS / Lambda | Accepted | 2026-06-24 |
 | ADR-002 | Data storage — DynamoDB cho incident state + idempotency | Accepted | 2026-06-24 |
 | ADR-003 | CI/CD strategy — GitHub Actions + ArgoCD | Accepted | 2026-06-25 |
-| ADR-004 | Observability stack — Prometheus + Loki + CloudWatch | Proposed | — |
-| ADR-005 | Security baseline — IAM least-privilege + Secrets Manager | Proposed | — |
-| ADR-006 | Cost trade-off — On-demand vs Reserved cho demo | Proposed | — |
+| ADR-004 | Observability stack — Prometheus + Loki + CloudWatch | Accepted | 2026-06-26 |
+| ADR-005 | Security baseline — IAM least-privilege + Secrets Manager | Accepted | 2026-06-26 |
+| ADR-006 | Cost trade-off — On-demand vs Reserved cho demo | Accepted | 2026-06-26 |
 | ADR-007 | Alert Event Pipeline — SQS FIFO + DynamoDB/S3 | Accepted | 2026-06-24 |
 
 ---
@@ -53,13 +53,16 @@
   Chọn **DynamoDB on-demand** làm kho lưu trữ trạng thái incident và idempotency. Schema: `incident_id` (hash key) + `timestamp` (range key). Sử dụng Global Secondary Index (GSI) theo `tenant_id` + `timestamp` để phục vụ kiểm toán và bật tính năng TTL 90 ngày để tự động dọn dẹp dữ liệu cũ.
   
 - **Consequence**:
-  - ✅ Serverless, không cần manage database server trong khi đã có EKS cluster cần quản lý — tránh thêm operational overhead.
-  - ✅ On-demand billing phù hợp với workload alert-driven không liên tục — chỉ tốn tiền khi có incident thật.
-  - ✅ Query theo `tenant_id` + `timestamp` qua GSI nhanh và đơn giản — đủ cho audit trail và multi-tenant isolation check.
-  - ✅ TTL tự động xóa record cũ sau 90 ngày — không cần build cleanup job.
-  - ✅ DynamoDB conditional write hỗ trợ idempotency key pattern tự nhiên — tránh race condition khi retry.
-  - ⚠️ Không có complex SQL query — chỉ query theo key/GSI. Đủ cho use case audit trail đơn giản của TF1, nhưng nếu cần analytics phức tạp sau này phải export sang S3 + Athena.
-  - ⚠️ Hot partition nếu nhiều incident cùng `tenant_id` trong thời gian ngắn — mitigate bằng `incident_id` là UUID random làm hash key, tránh partition skew.
+  - ✅ **Hoạt động Serverless**: Không cần vận hành database server (operational overhead) khi đã có EKS cluster cần quản trị.
+  - ✅ **Tối ưu hóa chi phí (Pay-per-request)**: On-demand billing cực kỳ phù hợp với workload alert-driven, chỉ tính tiền khi có incident phát sinh.
+  - ✅ **Truy vấn nhanh và đơn giản**: Hỗ trợ query theo `tenant_id` + `timestamp` qua GSI với tốc độ mili-giây, đáp ứng yêu cầu audit trail và multi-tenant isolation.
+  - ✅ **Tự động dọn dẹp (TTL 90 ngày)**: Hệ thống tự xóa record cũ mà không cần viết custom cleanup cronjob.
+  - ✅ **Hỗ trợ khử trùng (Idempotency)**: Hỗ trợ ghi có điều kiện (conditional write) giúp triển khai idempotency key pattern một cách tự nhiên.
+  - ⚠️ **Giới hạn về khả năng truy vấn**: Không hỗ trợ câu lệnh SQL phức tạp, chỉ truy vấn qua partition key và GSI. Phải dùng Athena + S3 nếu cần làm analytics chuyên sâu.
+  - ⚠️ **Rủi ro Hot Partition**: Nếu bão cảnh báo xảy ra trên cùng một tenant có thể gây mất cân bằng partition. Cách giải quyết là dùng `incident_id` (UUID ngẫu nhiên) làm Partition Key để phân phối đều dữ liệu.
+- **Alternatives considered**:
+  - *Relational Database (Amazon RDS PostgreSQL)*: Bị loại vì chi phí duy trì database instance tĩnh rất cao, đòi hỏi cấu hình backup/scaling phức tạp trong khi nhu cầu của TF1 chỉ là lưu trạng thái incident đơn giản.
+  - *Amazon DocumentDB (MongoDB-compatible)*: Bị loại vì DocumentDB đòi hỏi chi phí tối thiểu cho cluster lớn và quá dư thừa tính năng đối với tác vụ tra cứu theo key đơn giản của CDO.
 
 ---
 
@@ -70,16 +73,15 @@
 - **Context**: CDO-05 cần một CI/CD pipeline để build container image, chạy test, scan security và deploy lên EKS cluster. Cần phân biệt rõ hai phần: CI (build/test/scan) và CD (deploy lên K8s). Pipeline phải hỗ trợ GitOps để đảm bảo trạng thái cluster luôn sync với Git, có rollback nhanh khi cần và drift detection.
 - **Decision**: Chọn **GitHub Actions** cho phần CI (build + test + scan + push image lên ECR) và **ArgoCD** cho phần CD (GitOps deploy lên EKS). Hai công cụ đảm nhận vai trò tách biệt: GitHub Actions lo phần build pipeline; ArgoCD lo phần sync K8s manifest từ Git vào cluster. Deploy strategy: **canary** — 10% traffic trước, quan sát error rate và latency, sau đó tăng lên 50% rồi 100%.
 - **Consequence**:
-  - ✅ Phân tách rõ CI và CD — GitHub Actions không cần biết cluster kubeconfig, ArgoCD không cần biết build logic. Boundary sạch, dễ debug.
-  - ✅ GitHub Actions cực kỳ linh hoạt, hỗ trợ kho Action Marketplace phong phú (dễ dàng tích hợp các bước test, scan Trivy/Snyk, push ECR).
-  - ✅ Bảo mật cao nhờ tích hợp AWS OIDC Federation — GitHub Actions gọi AWS services (ECR, etc.) thông qua IAM Role tạm thời (OIDC), không cần lưu trữ static Access Key nhạy cảm trong GitHub Secrets.
-  - ✅ ArgoCD đã học trong W10, team quen cách dùng — không mất thời gian học mới trong W11-W12.
-  - ✅ GitOps với ArgoCD đảm bảo cluster state luôn có source of truth trong Git — rollback chỉ cần revert Git commit, ArgoCD tự sync.
-  - ✅ ArgoCD drift detection tự phát hiện khi cluster state lệch khỏi Git — daily drift report về Slack.
-  - ✅ Canary deploy giảm blast radius khi deploy có lỗi — error rate > 1% hoặc p99 latency > 800ms thì auto-abort và rollback.
-  - ⚠️ Cần kết nối từ bên ngoài (GitHub runner) vào AWS ECR — giải quyết bằng IAM OIDC role để tránh rủi ro credential.
-  - ⚠️ ArgoCD cần thêm một workload trong cluster — tốn resource nhỏ (~200MB RAM) nhưng không đáng kể.
-  - ⚠️ Canary deploy phức tạp hơn rolling update — cần Argo Rollouts hoặc Ingress weight config. Trade-off chấp nhận được vì team đã học Argo Rollouts trong W9.
+  - ✅ **Tách biệt rạch ròi CI và CD**: GitHub Actions không cần quyền truy cập cụm EKS (kubeconfig); ArgoCD không cần biết mã nguồn/build logic. Tạo ranh giới bảo mật sạch sẽ.
+  - ✅ **Pipeline linh hoạt**: GitHub Actions dễ dàng tích hợp các bước kiểm thử, quét mã nguồn (Trivy/Snyk) và đẩy image lên AWS ECR thông qua thư viện Action Marketplace đa dạng.
+  - ✅ **Bảo mật tuyệt đối qua AWS OIDC**: Kết nối giữa GitHub và AWS thông qua OpenID Connect (OIDC) federation, sử dụng role tạm thời, hoàn toàn không lưu trữ AWS Access Key tĩnh trên GitHub.
+  - ✅ **Kiểm soát trạng thái qua Git (GitOps)**: Cluster EKS luôn đồng bộ với Git (Source of Truth). Hỗ trợ rollback tức thì chỉ bằng cách revert commit trên Git.
+  - ✅ **Phát hiện sai lệch (Drift Detection)**: ArgoCD tự động cảnh báo khi có thay đổi thủ công trên EKS cluster so với khai báo trên Git.
+  - ✅ **Giảm thiểu blast radius nhờ Canary**: Deploy canary giúp giảm rủi ro cập nhật lỗi; tự động rollback nếu tỷ lệ lỗi > 1% hoặc latency tăng đột biến.
+  - ⚠️ **Kết nối an toàn ra ngoài AWS**: Cần thiết lập IAM OIDC Identity Provider giữa AWS và GitHub Actions.
+  - ⚠️ **Tiêu tốn tài nguyên cho Controller**: ArgoCD Controller chiếm một lượng nhỏ tài nguyên (~200MB RAM) chạy thường trực trên EKS.
+  - ⚠️ **Độ phức tạp của chiến lược Canary**: Triển khai Canary yêu cầu cài đặt thêm Argo Rollouts điều phối traffic phức tạp hơn cơ chế Rolling Update mặc định.
 - **Alternatives considered**:
   - **AWS CodePipeline (CI) + ArgoCD (CD)**: Native hoàn toàn trong AWS ecosystem. Bị loại vì CodePipeline kém linh hoạt hơn GitHub Actions, viết script phức tạp hơn, thời gian build chậm hơn và team ít quen thuộc hơn so với GitHub Actions.
   - **GitHub Actions + Flux (thay ArgoCD)**: Flux cũng là GitOps tool tốt. Bị loại vì team đã học ArgoCD trong W10, chuyển sang Flux mất thêm thời gian học trong W11-W12.
@@ -90,34 +92,68 @@
 
 ## ADR-004 — Observability stack: Prometheus + Loki + CloudWatch
 
-- **Status**: Proposed
-- **Date**: —
-- **Context**: Xác định giải pháp giám sát tập trung cho EKS workload và hạ tầng AWS.
-- **Decision**: *TBD*
-- **Consequence**: *TBD*
-- **Alternatives considered**: *TBD*
+- **Status**: Accepted
+- **Date**: 2026-06-26
+- **Context**: 
+  Dự án yêu cầu giám sát chi tiết các chỉ số hiệu năng (metrics), nhật ký hoạt động (logs) của hàng loạt container chạy trên EKS (bao gồm ứng dụng demo và worker), cũng như giám sát trạng thái của các dịch vụ AWS managed (Lambda, SQS FIFO backlog, DynamoDB metrics). AI Engine cũng cần dữ liệu logs và metrics có cấu trúc theo nhãn để thực hiện RCA.
+- **Decision**: 
+  Sử dụng giải pháp hỗn hợp (**hybrid observability model**):
+  - Dùng **Prometheus Operator** (Helm chart) cài trên EKS để thu thập, đánh giá metrics của K8s cluster và các pod ứng dụng qua cơ chế Service Discovery.
+  - Dùng **Loki & Promtail** để gom log tập trung của các container chạy trong cụm EKS.
+  - Dùng **Grafana** làm giao diện trực quan hóa duy nhất (Single Pane of Glass) để truy vấn cả metrics từ Prometheus và logs từ Loki.
+  - Dùng **AWS CloudWatch** cho hạ tầng AWS bên ngoài cụm: giám sát log của Lambda, backlog SQS FIFO, lỗi DynamoDB, và traffic/request của S3.
+- **Consequence**:
+  - ✅ **Tối ưu hóa cho K8s và AI Engine**: Prometheus và Loki sử dụng chung hệ thống label (nhãn pod/namespace/tenant_id), giúp AI Engine dễ dàng truy vấn chéo dữ liệu ngữ cảnh mà không cần chắp vá cấu trúc log/metric.
+  - ✅ **Giám sát toàn diện cả trong và ngoài**: CloudWatch quản lý tốt các dịch vụ serverless bên ngoài K8s, trong khi Prometheus/Loki đảm nhận phần workload động bên trong cụm.
+  - ✅ **Tiết kiệm chi phí lưu trữ**: Tránh đẩy toàn bộ log thô của container lên CloudWatch Logs (vốn có chi phí rất đắt đỏ), thay vào đó lưu tại Loki với ổ đĩa EBS/S3 rẻ hơn.
+  - ⚠️ **Tăng operational overhead**: Phải duy trì và cấu hình 2 hệ thống giám sát song song (CloudWatch + Prometheus/Loki), cần thiết lập IAM credentials phù hợp để AI Engine truy vấn dữ liệu từ cả hai phía.
+- **Alternatives considered**:
+  - *AWS CloudWatch all-in (Container Insights)*: Bị loại vì chi phí lưu trữ logs/metrics từ K8s trên CloudWatch cực kỳ đắt đỏ ở quy mô lớn, đồng thời thiếu tính linh hoạt khi định nghĩa các nhãn động theo tenant cho AI Engine truy vấn.
+  - *Chỉ dùng Prometheus/Loki*: Bị loại vì Prometheus/Loki chạy trong EKS không thể tự thu thập trực tiếp metrics/logs từ các dịch vụ serverless của AWS như Lambda, SQS FIFO, S3 trừ khi viết thêm các custom exporter phức tạp.
 
 ---
 
 ## ADR-005 — Security baseline: IAM least-privilege + Secrets Manager
 
-- **Status**: Proposed
-- **Date**: —
-- **Context**: Thiết lập ranh giới bảo mật cho các pod truy cập tài nguyên AWS và quản lý thông tin nhạy cảm.
-- **Decision**: *TBD*
-- **Consequence**: *TBD*
-- **Alternatives considered**: *TBD*
+- **Status**: Accepted
+- **Date**: 2026-06-26
+- **Context**: 
+  Ứng dụng demo, CDO Correlator Worker chạy trong EKS và các hàm Lambda (Ingest/Integration) cần tương tác trực tiếp với các tài nguyên AWS (SQS FIFO, DynamoDB, S3, Secrets Manager). Việc lưu trữ AWS Access Key cứng hoặc cấp quyền Admin/chạy chéo tài nguyên sẽ tạo ra lỗ hổng bảo mật nghiêm trọng. Hơn nữa, các token truy cập Jira/Slack/AI Engine API cần được bảo vệ tuyệt đối.
+- **Decision**: 
+  Thiết lập bảo mật theo nguyên tắc **Đặc quyền tối thiểu (Least Privilege)** và **Quản lý Secrets tập trung**:
+  - Sử dụng **IAM Roles for Service Accounts (IRSA)** và **EKS Pod Identity** để gắn IAM Role trực tiếp vào ServiceAccount của K8s Pod.
+  - Viết các chính sách IAM Policy chặt chẽ, giới hạn theo ARN cụ thể (ví dụ: Ingest Lambda chỉ được ghi vào bảng DynamoDB `idempotency` và SQS FIFO chỉ định).
+  - Sử dụng **AWS Secrets Manager** để lưu trữ toàn bộ token nhạy cảm (Jira, Slack, AI Engine API keys). Ứng dụng đọc secret động tại runtime qua AWS API, không lưu biến môi trường tĩnh.
+- **Consequence**:
+  - ✅ **Loại bỏ hoàn toàn Access Key tĩnh**: Không có thông tin đăng nhập AWS nào được lưu trữ trên Git hoặc trong cấu hình container, loại bỏ nguy cơ lộ lọt credential.
+  - ✅ **Giảm thiểu blast radius (vùng ảnh hưởng)**: Nếu một Pod hoặc Lambda bị hack, kẻ tấn công cũng chỉ có quyền hạn cực nhỏ trên tài nguyên được chỉ định, không thể leo thang đặc quyền.
+  - ✅ **Xoay vòng secret dễ dàng**: Secrets Manager hỗ trợ tự động rotation key mà không cần redeploy hay thay đổi code ứng dụng.
+  - ⚠️ **Độ phức tạp cấu hình cao**: Cần duy trì mối liên kết chặt chẽ giữa IAM Role, IAM Policy, ServiceAccount và Helm charts của ứng dụng.
+- **Alternatives considered**:
+  - *Lưu AWS Access Key tĩnh trong K8s Secrets*: Bị loại vì rủi ro bảo mật rất cao nếu EKS cluster bị xâm nhập, các key tĩnh này không tự động hết hạn và rất khó kiểm soát xoay vòng key.
+  - *Cấp quyền IAM rộng cho EKS Worker Node (Instance Profile)*: Bị loại vì vi phạm nguyên tắc đặc quyền tối thiểu. Bất kỳ Pod nào chạy trên node đó đều có thể giả mạo quyền truy cập toàn bộ tài nguyên AWS của node.
 
 ---
 
 ## ADR-006 — Cost trade-off: On-demand vs Reserved cho demo
 
-- **Status**: Proposed
-- **Date**: —
-- **Context**: Lựa chọn mô hình thanh toán tài nguyên tối ưu nhất trong ngân sách capstone.
-- **Decision**: *TBD*
-- **Consequence**: *TBD*
-- **Alternatives considered**: *TBD*
+- **Status**: Accepted
+- **Date**: 2026-06-26
+- **Context**: 
+  Dự án Capstone chạy thử nghiệm trong môi trường demo/sandbox với thời lượng ngắn (chỉ vài tuần/tháng) và lưu lượng cảnh báo không liên tục. Cần tối ưu chi phí hạ tầng AWS trong phạm vi ngân sách giới hạn nhưng vẫn phải đảm bảo kiến trúc sẵn sàng mở rộng (scalable).
+- **Decision**: 
+  Áp dụng mô hình **On-demand** và **Pay-per-request**:
+  - EKS Node Group sử dụng dòng máy `m7i-flex.large` chạy ở chế độ On-demand.
+  - Sử dụng chế độ **Pay-per-request (On-demand capacity mode)** cho cả hai bảng DynamoDB thay vì chế độ Provisioned Capacity.
+  - Thiết lập giá trị mặc định cho WAF bảo vệ ALB và CloudTrail là tắt (`enable_waf = false`, `enable_cloudtrail = false`) trong môi trường Sandbox.
+  - Đặt thời hạn tự động dọn dẹp log (retention policy) ngắn hạn (7 ngày cho CloudWatch Logs và Loki).
+- **Consequence**:
+  - ✅ **Chi phí thực tế cực thấp**: Chỉ trả tiền cho những gì sử dụng trong thời gian chạy demo; không bị ràng buộc hợp đồng trả trước; dễ dàng dọn dẹp (destroy) tài nguyên khi kết thúc dự án.
+  - ✅ **Tránh lãng phí tài nguyên**: DynamoDB On-demand giúp hệ thống không tốn chi phí duy trì tĩnh khi không có alert storm xảy ra.
+  - ⚠️ **Chi phí theo giờ cao hơn**: Giá thuê máy ảo On-demand đắt hơn 30–40% so với Reserved Instances nếu chạy liên tục dài hạn (trên 1 năm). Tuy nhiên, trade-off này hoàn toàn xứng đáng vì dự án capstone chỉ chạy trong thời gian ngắn.
+- **Alternatives considered**:
+  - *Mua Reserved Instances hoặc cam kết Savings Plans*: Bị loại vì thời gian chạy dự án capstone quá ngắn (dưới 1 năm), mua trả trước sẽ gây lãng phí lớn khi không dùng hết thời hạn cam kết.
+  - *Sử dụng DynamoDB Provisioned Mode*: Bị loại vì lưu lượng cảnh báo của môi trường demo rất thất thường (phân mảnh), việc ước lượng dung lượng đọc/ghi tĩnh sẽ dẫn đến lãng phí khi nhàn rỗi hoặc bị nghẽn (throttling) khi bão cảnh báo ập đến.
 
 ---
 
