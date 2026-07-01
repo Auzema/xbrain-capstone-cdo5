@@ -31,14 +31,14 @@ configMapGenerator:
 
 images:
 - name: ai-engine
-  newName: 589077667575.dkr.ecr.us-east-1.amazonaws.com/tf1-ai-triage-engine
-  newTag: git-ac21f60
+  newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/tf1-triage-hub-sandbox/ai-engine
+  newTag: latest
 - name: platform-service
   newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/tf1-triage-hub-sandbox/platform-service
   newTag: latest
 - name: simulator
   newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/tf1-triage-hub-sandbox/observability-tools
-  newTag: sandbox-171a02e
+  newTag: latest
 - name: correlator-worker
   newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/tf1-triage-hub-sandbox/correlator-worker
   newTag: latest
