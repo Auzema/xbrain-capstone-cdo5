@@ -56,6 +56,8 @@ class TestIncidentServiceHandle:
         service, _, _, _ = make_service()
         result = await service.handle(make_report())
         assert result["status"] == "success"
+        assert result["jira_created"] is True
+        assert result["slack_notified"] is True
 
     async def test_calls_ai_engine(self):
         service, ai_mock, _, _ = make_service()
@@ -93,6 +95,8 @@ class TestIncidentServiceHandle:
         result = await service.handle(make_report())
         
         assert result["status"] == "fallback"
+        assert result["jira_created"] is True
+        assert result["slack_notified"] is True
         ticket_mock.create_ticket.assert_called_once()
         assert "[Fallback]" in ticket_mock.create_ticket.call_args.kwargs["summary"]
         notifier_mock.notify.assert_called_once()

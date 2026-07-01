@@ -45,12 +45,14 @@ class IncidentService:
             )
 
         # 2. Lấy ticket payload và tạo Jira Ticket
+        jira_created = False
         try:
             ticket_id = await asyncio.to_thread(
                 self._ticket_creator.create_ticket,
                 summary=ticket_summary,
                 description=ticket_description
             )
+            jira_created = True
         except Exception as e:
             logger.error(f"Failed to create Jira ticket: {e}")
             ticket_id = f"{config.JIRA_PROJECT_KEY}-FAIL-{uuid.uuid4().hex[:4].upper()}"
@@ -81,8 +83,10 @@ class IncidentService:
                 f"*Error:* AI Engine failed to respond."
             )
 
+        slack_notified = False
         try:
             await asyncio.to_thread(self._notifier.notify, message)
+            slack_notified = True
         except Exception as e:
             logger.error(f"Failed to send Slack notification: {e}")
 
@@ -90,4 +94,6 @@ class IncidentService:
             "status": "fallback" if ai_failed else "success",
             "ticket_id": ticket_id,
             "environment": config.ENV_NAME,
+            "jira_created": jira_created,
+            "slack_notified": slack_notified,
         }
