@@ -24,3 +24,5 @@ jobs:
     with:
       app_name: "platform-service"
       working_directory: "apps/platform-service"
+    secrets:
+      GH_PAT: ${{ secrets.GH_PAT }}

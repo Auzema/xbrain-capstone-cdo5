@@ -10,6 +10,9 @@ on:
         required: true
         type: string
         description: "Path to the app directory (e.g. apps/ai-engine)"
+    secrets:
+      GH_PAT:
+        required: true
 
 permissions:
   contents: write
@@ -35,7 +38,11 @@ jobs:
       - name: Run Pytest
         working-directory: ${{ inputs.working_directory }}
         run: |
-          PYTHONPATH=. pytest tests/
+          if [ -d "tests" ]; then
+            PYTHONPATH=. pytest tests/
+          else
+            echo "No tests directory found. Skipping tests."
+          fi
 
   determine-env:
     runs-on: ubuntu-latest
@@ -48,28 +55,10 @@ jobs:
         run: |
           PREFIX="${{ vars.ECR_REPO_PREFIX }}"
           APP="${{ inputs.app_name }}"
-          EVENT_NAME="${{ github.event_name }}"
-          if [[ "$EVENT_NAME" == "pull_request" ]]; then
-            PR_NUMBER="${{ github.event.pull_request.number }}"
-            echo "env_name=pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
-            echo "overlay_path=manifests/overlays/pr-${PR_NUMBER}" >> $GITHUB_OUTPUT
-            echo "ecr_repo=${PREFIX}-sandbox-tf1-${APP}" >> $GITHUB_OUTPUT
-          else
-            BRANCH="${GITHUB_REF_NAME}"
-            if [[ "$BRANCH" == release/* || "$BRANCH" == hotfix/* ]]; then
-              echo "env_name=staging" >> $GITHUB_OUTPUT
-              echo "overlay_path=manifests/overlays/staging" >> $GITHUB_OUTPUT
-              echo "ecr_repo=${PREFIX}-staging-tf1-${APP}" >> $GITHUB_OUTPUT
-            elif [[ "$BRANCH" == "main" ]]; then
-              echo "env_name=prod" >> $GITHUB_OUTPUT
-              echo "overlay_path=manifests/overlays/prod" >> $GITHUB_OUTPUT
-              echo "ecr_repo=${PREFIX}-prod-tf1-${APP}" >> $GITHUB_OUTPUT
-            else
-              echo "env_name=sandbox" >> $GITHUB_OUTPUT
-              echo "overlay_path=manifests/overlays/sandbox" >> $GITHUB_OUTPUT
-              echo "ecr_repo=${PREFIX}-sandbox-tf1-${APP}" >> $GITHUB_OUTPUT
-            fi
-          fi
+          # TODO: Add prod/staging logic when those environments are provisioned
+          echo "env_name=sandbox" >> $GITHUB_OUTPUT
+          echo "overlay_path=manifests/overlays/sandbox" >> $GITHUB_OUTPUT
+          echo "ecr_repo=${PREFIX}-sandbox-tf1-${APP}" >> $GITHUB_OUTPUT
 
   build-push:
     needs: [test, determine-env]
@@ -112,3 +101,5 @@ jobs:
       app-name: ${{ inputs.app_name }}
       image-tag: "${{ vars.ECR_REGISTRY }}/${{ needs.determine-env.outputs.ecr_repo }}:${{ needs.build-push.outputs.image-tag }}"
       overlay-path: ${{ needs.determine-env.outputs.overlay_path }}
+    secrets:
+      GH_PAT: ${{ secrets.GH_PAT }}

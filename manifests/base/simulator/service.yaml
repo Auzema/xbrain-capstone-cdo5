@@ -4,6 +4,8 @@ metadata:
   name: simulator
   labels:
     app: simulator
+  annotations:
+    team: platform
 spec:
   selector:
     app: simulator

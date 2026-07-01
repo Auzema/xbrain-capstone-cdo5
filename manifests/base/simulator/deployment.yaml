@@ -14,13 +14,30 @@ spec:
     metadata:
       labels:
         app: simulator
+      annotations:
+        team: platform
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
       serviceAccountName: simulator-sa
       containers:
         - name: simulator
           image: simulator:latest
           ports:
             - containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
           envFrom:
             - configMapRef:
                 name: platform-config

@@ -25,7 +25,7 @@ spec:
               - $values/manifests/overlays/{{env}}/values/alertmanager-value.yml
               - $values/manifests/overlays/{{env}}/values/grafana-values.yaml
 
-        - repoURL: "https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git"
+        - repoURL: "https://github.com/Auzema/xbrain-capstone-cdo5.git"
           targetRevision: HEAD
           ref: values
       destination:
@@ -48,7 +48,7 @@ spec:
   goTemplate: true
   generators:
     - git:
-        repoURL: "https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git"
+        repoURL: "https://github.com/Auzema/xbrain-capstone-cdo5.git"
         revision: HEAD
         directories:
           - path: "manifests/overlays/*"
@@ -60,7 +60,7 @@ spec:
     spec:
       project: triage-hub-project
       source:
-        repoURL: "https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git"
+        repoURL: "https://github.com/Auzema/xbrain-capstone-cdo5.git"
         targetRevision: HEAD
         path: "{{.path.path}}"
       destination:
@@ -107,7 +107,7 @@ spec:
     spec:
       project: triage-hub-project
       source:
-        repoURL: "https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git"
+        repoURL: "https://github.com/Auzema/xbrain-capstone-cdo5.git"
         targetRevision: "{{.head_sha}}"
         path: "manifests/overlays/sandbox" 
         kustomize:
@@ -154,7 +154,7 @@ spec:
           helm:
             valueFiles:
               - $values/manifests/overlays/{{env}}/values/nginx-values.yaml
-        - repoURL: "https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git"
+        - repoURL: "https://github.com/Auzema/xbrain-capstone-cdo5.git"
           targetRevision: HEAD
           ref: values
       destination:

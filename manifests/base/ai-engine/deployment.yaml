@@ -24,6 +24,8 @@ spec:
     metadata:
       labels:
         app: ai-engine
+      annotations:
+        team: ai
     spec:
       securityContext:
         runAsNonRoot: true

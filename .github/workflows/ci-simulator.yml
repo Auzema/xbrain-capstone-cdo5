@@ -24,3 +24,5 @@ jobs:
     with:
       app_name: "simulator"
       working_directory: "apps/simulator"
+    secrets:
+      GH_PAT: ${{ secrets.GH_PAT }}

@@ -4,6 +4,8 @@ metadata:
   name: ai-engine
   labels:
     app.kubernetes.io/name: ai-engine
+  annotations:
+    team: ai
 spec:
   selector:
     app: ai-engine

@@ -4,6 +4,8 @@ metadata:
   name: platform-service
   labels:
     app: platform-service
+  annotations:
+    team: platform
 spec:
   selector:
     app: platform-service
