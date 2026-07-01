@@ -26,7 +26,7 @@ env:
 
 jobs:
   determine-env:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       env_name: ${{ steps.set-env.outputs.env_name }}
       overlay_path: ${{ steps.set-env.outputs.overlay_path }}
@@ -43,7 +43,7 @@ jobs:
 
   build-push:
     needs: [determine-env]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       image-tag: ${{ steps.vars.outputs.tag }}
     steps:

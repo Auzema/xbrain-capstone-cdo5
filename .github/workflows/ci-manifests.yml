@@ -16,7 +16,7 @@ on:
 jobs:
   validate-apps:
     name: Validate App Manifests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
@@ -57,7 +57,7 @@ jobs:
 
   validate-policies:
     name: Validate Gatekeeper Policies
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
@@ -105,7 +105,7 @@ jobs:
   gator-test:
     name: Gatekeeper Policy Enforcement Test
     needs: [validate-apps, validate-policies]
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
 
