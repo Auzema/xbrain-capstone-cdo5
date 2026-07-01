@@ -1,0 +1,31 @@
+aws_region  = "us-east-1"
+project     = "tf1-triage-hub"
+environment = "sandbox"
+owner       = "cdo-05"
+
+enable_nat_gateway      = false
+enable_vpc_endpoints    = true
+enable_bedrock_endpoint = false
+
+cluster_endpoint_public_access       = true
+cluster_endpoint_private_access      = true
+cluster_endpoint_public_access_cidrs = ["0.0.0.0/0"]
+
+node_instance_types  = ["m7i-flex.large"]
+node_ami_type        = "AL2023_x86_64_STANDARD"
+node_desired_size    = 2
+node_min_size        = 1
+node_max_size        = 2
+node_disk_size       = 30
+enable_ebs_csi_addon = true
+
+enable_kms            = true
+enable_s3_object_lock = false
+enable_waf            = false
+enable_cloudtrail     = false
+
+ingest_function_url_auth_type = "AWS_IAM"
+lambda_reserved_concurrency   = -1
+
+enable_ai_bedrock_policy = false
+bedrock_model_arns       = []

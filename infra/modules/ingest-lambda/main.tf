@@ -39,7 +39,7 @@ data "aws_iam_policy_document" "ingest_lambda" {
   }
 
   statement {
-    sid    = "SendIncidentAlert"
+    sid    = "SendNormalizedAlert"
     effect = "Allow"
 
     actions = [
@@ -48,7 +48,35 @@ data "aws_iam_policy_document" "ingest_lambda" {
       "sqs:GetQueueUrl",
     ]
 
-    resources = [var.incident_queue_arn]
+    resources = [var.normalized_alerts_queue_arn]
+  }
+
+  statement {
+    sid    = "WriteIngestArtifacts"
+    effect = "Allow"
+
+    actions = [
+      "s3:PutObject",
+      "s3:AbortMultipartUpload",
+    ]
+
+    resources = [
+      "${var.audit_bucket_arn}/tenants/*",
+      "${var.audit_bucket_arn}/invalid/*",
+    ]
+  }
+
+  statement {
+    sid    = "WriteIngestIdempotency"
+    effect = "Allow"
+
+    actions = [
+      "dynamodb:GetItem",
+      "dynamodb:PutItem",
+      "dynamodb:UpdateItem",
+    ]
+
+    resources = [var.idempotency_table_arn]
   }
 
   statement {
@@ -72,6 +100,7 @@ data "aws_iam_policy_document" "ingest_lambda" {
 
       actions = [
         "kms:Decrypt",
+        "kms:Encrypt",
         "kms:GenerateDataKey",
         "kms:DescribeKey",
       ]
@@ -113,11 +142,13 @@ resource "aws_lambda_function" "ingest_alert" {
 
   environment {
     variables = {
-      INCIDENT_QUEUE_URL         = var.incident_queue_url
-      WEBHOOK_SIGNING_SECRET_ARN = var.webhook_signing_secret_arn
-      AUDIT_BUCKET_NAME          = var.audit_bucket_name
-      ENVIRONMENT                = var.environment
-      PROJECT                    = var.project
+      NORMALIZED_ALERTS_QUEUE_URL = var.normalized_alerts_queue_url
+      WEBHOOK_SIGNING_SECRET_ARN  = var.webhook_signing_secret_arn
+      AUDIT_BUCKET_NAME           = var.audit_bucket_name
+      IDEMPOTENCY_TABLE_NAME      = var.idempotency_table_name
+      S3_PREFIX_PRE_CORRELATION   = var.s3_prefix_pre_correlation
+      ENVIRONMENT                 = var.environment
+      PROJECT                     = var.project
     }
   }
 

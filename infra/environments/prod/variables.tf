@@ -13,7 +13,7 @@ variable "project" {
 variable "environment" {
   description = "Environment name."
   type        = string
-  default     = "sandbox"
+  default     = "prod"
 }
 
 variable "owner" {

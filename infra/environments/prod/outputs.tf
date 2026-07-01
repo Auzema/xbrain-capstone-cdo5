@@ -3,22 +3,22 @@ output "aws_region" {
 }
 
 output "vpc_id" {
-  value = module.networking.vpc_id
+  value = module.network.vpc_id
 }
 
 output "private_subnet_ids" {
-  value = module.networking.private_subnet_ids
+  value = module.network.private_subnet_ids
 }
 
 output "public_subnet_ids" {
-  value = module.networking.public_subnet_ids
+  value = module.network.public_subnet_ids
 }
 
 output "security_group_ids" {
   value = merge(
     module.security_groups.security_group_ids,
     {
-      vpc_endpoints = module.networking.vpc_endpoint_security_group_id
+      vpc_endpoints = module.network.vpc_endpoint_security_group_id
     }
   )
 }
@@ -43,12 +43,28 @@ output "incident_queue_arn" {
   value = module.queue.incident_queue_arn
 }
 
+output "normalized_alerts_queue_url" {
+  value = module.queue.normalized_alerts_queue_url
+}
+
+output "normalized_alerts_queue_arn" {
+  value = module.queue.normalized_alerts_queue_arn
+}
+
+output "normalized_alerts_queue_name" {
+  value = module.queue.normalized_alerts_queue_name
+}
+
 output "incident_dlq_url" {
   value = module.queue.incident_dlq_url
 }
 
 output "incident_state_table_name" {
   value = module.storage.incident_state_table_name
+}
+
+output "idempotency_table_name" {
+  value = module.storage.idempotency_table_name
 }
 
 output "audit_bucket_name" {

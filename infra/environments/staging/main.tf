@@ -1,4 +1,4 @@
-module "networking" {
+module "network" {
   source = "../../modules/networking"
 
   name_prefix             = local.name_prefix
@@ -16,13 +16,13 @@ module "security_groups" {
   source = "../../modules/security-groups"
 
   name_prefix                    = local.name_prefix
-  vpc_id                         = module.networking.vpc_id
+  vpc_id                         = module.network.vpc_id
   public_alb_allowed_cidrs       = var.public_alb_allowed_cidrs
   app_target_port                = var.app_target_port
   ai_engine_port                 = var.ai_engine_port
   otel_grpc_port                 = var.otel_grpc_port
   otel_http_port                 = var.otel_http_port
-  vpc_endpoint_security_group_id = module.networking.vpc_endpoint_security_group_id
+  vpc_endpoint_security_group_id = module.network.vpc_endpoint_security_group_id
 }
 
 module "security" {
@@ -68,8 +68,8 @@ module "eks" {
   name_prefix                          = local.name_prefix
   environment                          = var.environment
   partition                            = data.aws_partition.current.partition
-  vpc_id                               = module.networking.vpc_id
-  private_subnet_ids                   = module.networking.private_subnet_ids
+  vpc_id                               = module.network.vpc_id
+  private_subnet_ids                   = module.network.private_subnet_ids
   cluster_version                      = var.cluster_version
   cluster_endpoint_public_access       = var.cluster_endpoint_public_access
   cluster_endpoint_public_access_cidrs = var.cluster_endpoint_public_access_cidrs
