@@ -75,3 +75,5 @@ jobs:
       app-name: ${{ inputs.app_name }}
       image-tag: "${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPO_PREFIX }}-prod-tf1-${{ inputs.app_name }}:${{ inputs.release_tag }}"
       overlay-path: manifests/overlays/prod
+    secrets:
+      GH_PAT: ${{ secrets.GH_PAT }}
