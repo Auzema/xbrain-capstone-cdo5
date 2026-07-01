@@ -176,7 +176,7 @@ variable "enable_ebs_csi_addon" {
 variable "log_retention_days" {
   description = "CloudWatch log retention days."
   type        = number
-  default     = 14
+  default     = 7
 }
 
 variable "audit_retention_days" {
