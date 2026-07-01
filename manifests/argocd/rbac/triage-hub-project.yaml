@@ -1,0 +1,41 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: triage-hub-project
+  namespace: argocd
+spec:
+  description: "Dự án quản lý cho Tenant Triage Hub (Bao gồm Platform, AI Engine & Monitoring)"
+  
+  destinations:
+    - namespace: 'xbrain-cdo5-*'
+      server: https://kubernetes.default.svc
+    - namespace: 'monitoring-*'
+      server: https://kubernetes.default.svc
+    - namespace: 'core-infra-*'
+      server: https://kubernetes.default.svc
+
+  sourceRepos:
+    - 'https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git'
+    - 'https://prometheus-community.github.io/helm-charts'
+    - 'https://kubernetes.github.io/ingress-nginx'
+
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  roles:
+    - name: tenant-admin
+      description: "Toàn quyền quản lý các ứng dụng thuộc Tenant này"
+      policies:
+        - p, proj:triage-hub-project:tenant-admin, applications, *, triage-hub-project/*, allow
+      groups:
+        - cdo5-tenant-admins 
+
+    - name: oncall-engineer
+      description: "Chỉ được xem, đồng bộ (sync), và xử lý sự cố (action/restart/rollback)"
+      policies:
+        - p, proj:triage-hub-project:oncall-engineer, applications, get, triage-hub-project/*, allow
+        - p, proj:triage-hub-project:oncall-engineer, applications, sync, triage-hub-project/*, allow
+        - p, proj:triage-hub-project:oncall-engineer, applications, action/*, triage-hub-project/*, allow
+      groups:
+        - cdo5-oncall-engineers

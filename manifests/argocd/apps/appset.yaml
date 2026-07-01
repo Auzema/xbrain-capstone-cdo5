@@ -1,0 +1,169 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: monitoring-set
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - env: sandbox
+  template:
+    metadata:
+      name: "monitoring-{{env}}"
+      annotations:
+        argocd.argoproj.io/sync-wave: "1"
+    spec:
+      project: triage-hub-project
+      sources:
+        - repoURL: https://prometheus-community.github.io/helm-charts
+          targetRevision: 57.0.3
+          chart: kube-prometheus-stack
+          helm:
+            valueFiles:
+              - $values/manifests/overlays/{{env}}/values/prometheus-values.yaml
+              - $values/manifests/overlays/{{env}}/values/alertmanager-value.yml
+              - $values/manifests/overlays/{{env}}/values/grafana-values.yaml
+
+        - repoURL: "https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git"
+          targetRevision: HEAD
+          ref: values
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "monitoring-{{env}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: xbrain-appset
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - git:
+        repoURL: "https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git"
+        revision: HEAD
+        directories:
+          - path: "manifests/overlays/*"
+  template:
+    metadata:
+      name: "xbrain-cdo5-{{.path.basename}}"
+      annotations:
+        argocd.argoproj.io/sync-wave: "2"
+    spec:
+      project: triage-hub-project
+      source:
+        repoURL: "https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git"
+        targetRevision: HEAD
+        path: "{{.path.path}}"
+      destination:
+        server: "https://kubernetes.default.svc"
+        namespace: "xbrain-cdo5-{{.path.basename}}"
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+      ignoreDifferences:
+        - group: external-secrets.io
+          kind: ExternalSecret
+          jsonPointers:
+            - /status
+  templatePatch: |
+    {{- if ne .path.basename "prod" }}
+    spec:
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+    {{- end }}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: xbrain-pr-appset
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - pullRequest:
+        github:
+          owner: me-dangnhatminh
+          repo: xbrain-capstone-cdo5
+          tokenRef:
+            secretName: github-token
+            key: token
+        requeueAfterSeconds: 180
+  template:
+    metadata:
+      name: "xbrain-cdo5-pr-{{.number}}"
+      annotations:
+        argocd.argoproj.io/sync-wave: "2"
+    spec:
+      project: triage-hub-project
+      source:
+        repoURL: "https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git"
+        targetRevision: "{{.head_sha}}"
+        path: "manifests/overlays/sandbox" 
+        kustomize:
+          images:
+            - "platform-service=458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-platform-service:pr-{{.number}}"
+            - "ai-engine=458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-ai-engine:pr-{{.number}}"
+            - "simulator=458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-simulator:pr-{{.number}}"
+      destination:
+        server: "https://kubernetes.default.svc"
+        namespace: "xbrain-cdo5-pr-{{.number}}"
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
+        automated:
+          prune: true
+          selfHeal: true
+      ignoreDifferences:
+        - group: external-secrets.io
+          kind: ExternalSecret
+          jsonPointers:
+            - /status
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: core-infra-set
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - env: sandbox
+  template:
+    metadata:
+      name: "core-infra-{{env}}"
+      annotations:
+        argocd.argoproj.io/sync-wave: "1"
+    spec:
+      project: triage-hub-project
+      sources:
+        - repoURL: https://kubernetes.github.io/ingress-nginx
+          targetRevision: 4.10.0
+          chart: ingress-nginx
+          helm:
+            valueFiles:
+              - $values/manifests/overlays/{{env}}/values/nginx-values.yaml
+        - repoURL: "https://github.com/me-dangnhatminh/xbrain-capstone-cdo5.git"
+          targetRevision: HEAD
+          ref: values
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "core-infra-{{env}}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true

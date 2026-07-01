@@ -1,0 +1,15 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sPSPHostFilesystem
+metadata:
+  name: restrict-host-path
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaces:
+      - triage-hub-sandbox
+      - triage-hub-staging
+      - triage-hub-prod
+  parameters:
+    allowedHostPaths: []

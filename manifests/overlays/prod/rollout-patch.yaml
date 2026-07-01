@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: ai-engine
+spec:
+  strategy:
+    canary:
+      steps:
+        - setWeight: 25
+        - pause: {duration: 5m}
+        - analysis:
+            templates:
+            - templateName: nginx-success-rate
+            args:
+            - name: ingress-name
+              value: ai-engine-ingress
+        - setWeight: 50
+        - pause: {duration: 5m}
+        - analysis:
+            templates:
+            - templateName: nginx-success-rate
+            args:
+            - name: ingress-name
+              value: ai-engine-ingress
+        - setWeight: 75
+        - pause: {duration: 5m}
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: platform-service
+spec:
+  strategy:
+    canary:
+      steps:
+        - setWeight: 25
+        - pause: {duration: 5m}
+        - analysis:
+            templates:
+            - templateName: platform-nginx-success-rate
+            args:
+            - name: ingress-name
+              value: platform-service-ingress
+        - setWeight: 50
+        - pause: {duration: 5m}
+        - analysis:
+            templates:
+            - templateName: platform-nginx-success-rate
+            args:
+            - name: ingress-name
+              value: platform-service-ingress
+        - setWeight: 75
+        - pause: {duration: 5m}

@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../base/ai-engine
+- ../../base/platform-service
+- ../../base/simulator
+
+components:
+- ../../base/external-secrets
+
+configMapGenerator:
+- behavior: merge
+  literals:
+  - ENV_NAME=prod
+  - LOG_LEVEL=WARNING
+  - AWS_REGION=us-east-1
+  - AI_ENGINE_URL=http://ai-engine:8080
+  name: platform-config
+
+images:
+- name: ai-engine
+  newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-prod-tf1-ai-engine
+  newTag: prod-ac85251
+- name: platform-service
+  newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-prod-tf1-platform-service
+  newTag: latest
+- name: simulator
+  newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-prod-tf1-simulator
+  newTag: latest
+
+patchesStrategicMerge:
+- rollout-patch.yaml
+- hpa-patch.yaml

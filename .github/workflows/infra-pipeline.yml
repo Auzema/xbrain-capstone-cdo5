@@ -1,0 +1,69 @@
+name: Infrastructure Pipeline
+on:
+  push:
+    branches:
+      - "develop"
+      - "release/**"
+      - "hotfix/**"
+      - "main"
+    paths:
+      - "infra/**"
+  pull_request:
+    branches:
+      - "develop"
+      - "release/**"
+      - "hotfix/**"
+      - "main"
+    paths:
+      - "infra/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  determine-env:
+    runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.set-env.outputs.env_name }}
+      tf_working_dir: ${{ steps.set-env.outputs.tf_working_dir }}
+    steps:
+      - id: set-env
+        run: |
+          EVENT_NAME="${{ github.event_name }}"
+          # For PRs, we care about the target branch (base_ref)
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BRANCH="${{ github.base_ref }}"
+          else
+            BRANCH="${GITHUB_REF_NAME}"
+          fi
+
+          if [[ "$BRANCH" == release/* || "$BRANCH" == hotfix/* ]]; then
+            echo "env_name=sandbox" >> $GITHUB_OUTPUT
+            echo "tf_working_dir=infra/environments/sandbox" >> $GITHUB_OUTPUT
+          elif [[ "$BRANCH" == "main" ]]; then
+            echo "env_name=sandbox" >> $GITHUB_OUTPUT
+            echo "tf_working_dir=infra/environments/sandbox" >> $GITHUB_OUTPUT
+          else
+            echo "env_name=sandbox" >> $GITHUB_OUTPUT
+            echo "tf_working_dir=infra/environments/sandbox" >> $GITHUB_OUTPUT
+          fi
+
+  plan:
+    needs: determine-env
+    uses: ./.github/workflows/_reusable-tf-plan.yml
+    with:
+      environment: ${{ needs.determine-env.outputs.env_name }}
+      tf_working_dir: ${{ needs.determine-env.outputs.tf_working_dir }}
+    secrets: inherit
+
+  apply:
+    needs: [determine-env, plan]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/_reusable-tf-apply.yml
+    with:
+      environment: ${{ needs.determine-env.outputs.env_name }}
+      tf_working_dir: ${{ needs.determine-env.outputs.tf_working_dir }}
+    secrets: inherit

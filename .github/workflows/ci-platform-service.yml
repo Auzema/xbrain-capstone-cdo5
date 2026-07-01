@@ -1,0 +1,26 @@
+name: CI - Platform Service
+on:
+  push:
+    branches:
+      - "develop"
+      - "release/**"
+      - "hotfix/**"
+      - "feat/**"
+      - "bugfix/**"
+    paths:
+      - "apps/platform-service/**"
+  pull_request:
+    branches:
+      - "develop"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  ci:
+    uses: ./.github/workflows/_reusable-ci-python-app.yml
+    with:
+      app_name: "platform-service"
+      working_directory: "apps/platform-service"

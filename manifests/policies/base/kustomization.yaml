@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # ConstraintTemplates (Rego logic - shared across all environments)
+  - templates/k8s-required-labels.yaml
+  - templates/k8s-container-limits.yaml
+  - templates/k8s-disallowed-tags.yaml
+  - templates/k8s-required-annotations.yaml
+  - templates/k8s-psp-allowed-users.yaml
+  - templates/k8s-psp-host-filesystem.yaml
+  - templates/k8s-block-loadbalancer.yaml
+  - templates/k8s-block-cross-namespace-service.yaml
+
+  # Constraints (Rules applying templates)
+  - constraints/require-app-labels.yaml
+  - constraints/require-container-limits.yaml
+  - constraints/disallow-latest-tag.yaml
+  - constraints/require-app-annotations.yaml
+  - constraints/run-as-non-root.yaml
+  - constraints/restrict-host-path.yaml
+  - constraints/block-loadbalancer.yaml
+  - constraints/block-cross-namespace-service.yaml
