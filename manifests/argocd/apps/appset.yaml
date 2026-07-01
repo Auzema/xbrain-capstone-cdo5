@@ -167,3 +167,61 @@ spec:
         syncOptions:
           - CreateNamespace=true
           - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: gatekeeper-policies-set
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - env: sandbox
+          - env: staging
+          - env: prod
+  template:
+    metadata:
+      name: "policies-{{env}}"
+      annotations:
+        argocd.argoproj.io/sync-wave: "1"
+    spec:
+      project: security-project
+      source:
+        repoURL: "https://github.com/Auzema/xbrain-capstone-cdo5.git"
+        targetRevision: HEAD
+        path: "manifests/policies/overlays/{{env}}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: "gatekeeper-system"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-rbac
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: security-project
+  source:
+    repoURL: "https://github.com/Auzema/xbrain-capstone-cdo5.git"
+    targetRevision: HEAD
+    path: "manifests/argocd/rbac"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
