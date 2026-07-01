@@ -7,11 +7,13 @@ on:
       - "hotfix/**"
       - "feat/**"
       - "bugfix/**"
+      - "sanbox"
     paths:
       - "apps/platform-service/**"
   pull_request:
     branches:
       - "develop"
+      - "sanbox"
   workflow_dispatch:
 
 permissions:

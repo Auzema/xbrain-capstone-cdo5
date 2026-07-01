@@ -8,6 +8,7 @@ on:
       - "main"
       - "release/**"
       - "develop"
+      - "sanbox"
     paths:
       - "manifests/**"
   workflow_dispatch:
