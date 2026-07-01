@@ -27,7 +27,7 @@ permissions:
 
 jobs:
   determine-env:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     outputs:
       env_name: ${{ steps.set-env.outputs.env_name }}
       tf_working_dir: ${{ steps.set-env.outputs.tf_working_dir }}
