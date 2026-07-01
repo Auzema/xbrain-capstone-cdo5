@@ -171,3 +171,7 @@ module "optional_controls" {
   enable_kms        = var.enable_kms
   kms_key_arn       = module.security.kms_key_arn
 }
+
+module "eks_addons" {
+  source = "../../modules/eks-addons"
+}
