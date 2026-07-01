@@ -1,143 +1,128 @@
-# Cost Analysis — Task Force 1 · CDO-05
+# Phân Tích Chi Phí — Task Force 1 · CDO-05
 
 <!-- Doc owner: CDO-05
-     Status: Skeleton (W11 T6 Pack #1) → Measured actual (W12 T4 Pack #2)
+     Status: Cập nhật mô hình chi phí trực tiếp theo môi trường (W12 T4 Pack #2)
      Word target: 800-1500 từ -->
 
 ---
 
-## 1. Cost model per tenant (forecast)
+## 1. Mô hình chi phí môi trường (Dự báo)
 
-CDO-05 chọn EKS-native angle. Chi phí chia làm 2 loại:
-- **Fixed cost**: cluster EKS, ALB, VPC Interface Endpoints, observability stack — chia đều cho tất cả tenant.
-- **Variable cost**: DynamoDB, SQS, S3, Lambda, CloudWatch — tăng theo số lượng incident/alert thực tế.
+CDO-05 sử dụng kiến trúc EKS-native. Chi phí AWS được phân tích trực tiếp theo từng môi trường (Sandbox và Production) thay vì phân chia một cách khiên cưỡng theo từng tenant (khách thuê). Chi phí được chia làm hai loại chính:
+1. **Chi phí hạ tầng cố định (Fixed Cost)**: Các tài nguyên bị tính phí duy trì liên tục theo giờ hoặc theo tháng (EKS Control Plane, EC2 Nodes, NAT Gateway, VPC PrivateLink Interface Endpoints, KMS và Secrets Manager).
+2. **Chi phí biến đổi/sử dụng (Variable Cost)**: Các dịch vụ tính phí dựa trên lưu lượng, dung lượng lưu trữ hoặc số lần thực thi (Lambda, DynamoDB, SQS, S3, CloudWatch và các cuộc gọi AI Bedrock).
 
-| Component | AWS Service | Unit cost (us-east-1) | Tenant avg usage/month | $/tenant/month (50 tenant) |
-|---|---|---|---|---|
-| EKS control plane | EKS | $0.10/hr | Shared / 50 tenant | ~$1.46 |
-| API entry | ALB | ~$0.008/hr + LCU | Shared / 50 tenant | ~$0.12 |
-| Alert ingestion | Lambda (Ingest) | $0.20/1M req | ~500 invocations | ~$0.01 |
-| Event queue | SQS Standard | $0.40/1M msg | ~1000 messages | ~$0.01 |
-| Incident state | DynamoDB on-demand | $1.25/M WCU, $0.25/M RCU | ~5000 WCU, ~10000 RCU | ~$0.01 |
-| Audit storage | S3 Standard | $0.023/GB | ~0.5 GB evidence | ~$0.01 |
-| Metrics | Prometheus (in-cluster) | Nằm trong EKS (không tốn thêm) | — | — |
-| Logs | Loki (in-cluster) | Nằm trong EKS (không tốn thêm) | — | — |
-| AWS-side monitoring | CloudWatch Logs | $0.50/GB ingested | ~0.2 GB | ~$0.10 |
-| WAF (optional) | AWS WAF | ~$5/month base + $1/1M req | Shared / 50 tenant | ~$0.10 |
-| VPC Gateway Endpoints | S3, DynamoDB | Miễn phí | Shared / 50 tenant | $0.00 |
-| VPC Interface Endpoints | Secrets Manager, Bedrock | ~$0.01/hr/endpoint/AZ (3 AZs = ~$0.06/hr) | Shared / 50 tenant | ~$0.88 |
-| AI inference | Amazon Bedrock | <!-- TODO: SQ-05 chưa confirm --> | ~50 calls | <!-- TODO --> |
-| **Total / tenant / month (est.)** | | | | **~$2.70 + Bedrock** |
+### 1.1 Chi phí môi trường Sandbox (2 AZs, us-east-1)
 
-> ⚠️ **TODO (fill W12)**: Bedrock cost chưa có — đang là open question SQ-05 trong `03_security_design.md`: "Bedrock có bật thật không? Model/cost cap là gì?" Cần AIO-01 confirm trước khi điền. Ước tính tạm nếu dùng Claude Haiku: ~$0.25/1M input token × 50 calls × 2000 token/call ≈ $0.025/tenant/month.
->
-> ⚠️ **TODO (fill W12)**: WAF chỉ enable nếu ALB public internet. SQ-01 trong security design chưa confirm: "Public API/ALB có cần public internet thật không, hay chỉ demo internal?" Nếu internal only → WAF cost = $0.
+Môi trường Sandbox được tối ưu hóa để giảm thiểu chi phí tối đa bằng cách sử dụng 2 vùng sẵn sàng (AZs) và tắt các tính năng như AWS WAF hoặc CloudTrail trừ khi cần kiểm thử.
 
+| Dịch vụ AWS | Tiêu chí tính phí | Đơn giá (us-east-1) | Số lượng / Baseline | $/Giờ | $/Tháng (730h) |
+|---|---|---|---|---|---|
+| **EKS Control Plane** | Phí quản lý cụm (Cluster fee) | $0.10 / giờ | 1 cụm | $0.1000 | $73.00 |
+| **EKS Worker Nodes** | `m7i-flex.large` On-Demand | $0.0768 / giờ | 2 instances | $0.1536 | $112.13 |
+| **EKS Disk (EBS)** | Lưu trữ ổ đĩa gp3 EBS | $0.08 / GiB-tháng | 2 × 30 GiB | $0.0066 | $4.80 |
+| **VPC NAT Gateway** | Phí duy trì NAT Gateway | $0.045 / giờ | 1 NAT Gateway | $0.0450 | $32.85 |
+| **VPC Interface Endpoints** | Kết nối PrivateLink | $0.01 / AZ / giờ / endpoint | 8 endpoints × 2 AZs | $0.1600 | $116.80 |
+| **VPC Gateway Endpoints** | Điểm cuối S3 & DynamoDB | Miễn phí | 2 Gateway Endpoints | $0.0000 | $0.00 |
+| **Secrets Manager** | Lưu trữ secret đang hoạt động | $0.40 / secret-tháng | 5 secrets | — | $2.00 |
+| **AWS KMS** | Khóa mã hóa do khách hàng quản lý | $1.00 / khóa-tháng | 1 khóa | — | $1.00 |
+| **Tổng chi phí cố định** | | | | **~$0.465** | **~$342.58** |
+
+*Ghi chú: Các Interface Endpoint trong môi trường Sandbox bao gồm: `sqs`, `logs`, `ecr.api`, `ecr.dkr`, `ec2`, `sts`, `secretsmanager` và `kms`.*
 
 ---
 
-## 2. Cost at scale
+### 1.2 Chi phí môi trường Production (3 AZs, us-east-1)
 
-Fixed cost (EKS control plane, ALB, VPC Interface Endpoints, observability stack) được chia đều cho tất cả tenant — per-tenant cost giảm khi số tenant tăng.
+Môi trường Production dựa trên kiến trúc có tính sẵn sàng cao (High Availability), sử dụng 3 AZs để đảm bảo dự phòng và kích hoạt AWS WAF bảo vệ cho các điểm cuối ALB public.
 
-| Tenant count | Fixed cost ($/month) | Variable ($/month) | Total ($/month) | Avg per-tenant |
-|---|---|---|---|---|
-| 10 | ~$130.80 | ~$5 | ~$135.80 | ~$13.58 |
-| 50 | ~$130.80 | ~$25 | ~$155.80 | ~$3.12 |
-| 200 | ~$130.80 | ~$100 | ~$230.80 | ~$1.15 |
-
-> ⚠️ **TODO (fill W12)**: Các thông số tải thực tế khi >50 tenant sẽ được update sau load test trong `07_test_eval_report.md`.
-
-*Ghi chú: Fixed cost bao gồm EKS control plane ($73/tháng) + ALB (~$8/tháng) + CloudWatch (~$6/tháng) + VPC Interface Endpoints (~$43.80/tháng cho 2 endpoint ở 3 AZ). Compute node group không tính do sử dụng tài nguyên được cung cấp sẵn (không dùng trong tính toán chi phí này). WAF ($5/tháng base) được tính vào bảng mục 1 dưới dạng share cố định (chỉ active nếu ALB public, nếu internal-only thì WAF cost = $0).*
-
----
-
-## 3. Cost optimization applied
-
-### Đã áp dụng trong MVP
-
-- ✅ **2 environment thay vì 3** (dev + prod): Tiết kiệm ~$130.80/tháng so với chạy 3 cluster đầy đủ. Dev environment đóng vai trò staging, giảm fixed cost trong budget $100–150 / 2 tuần. (ADR-004 §0.4)
-- ✅ **DynamoDB on-demand**: Không cần ước lượng provisioned capacity trước — phù hợp với workload alert-driven không đều. Tránh overpay khi idle.
-- ✅ **Prometheus + Loki in-cluster**: Chạy trực tiếp trong cụm EKS — không tốn thêm managed service cost. Dùng lại tài nguyên cụm có sẵn.
-- ✅ **Lambda cho Ingest**: Chỉ tốn tiền khi có alert webhook thật — không chạy liên tục như ECS task.
-- ✅ **S3 lifecycle policy**: Evidence cũ hơn 30 ngày → chuyển sang S3 IA (Infrequent Access), tiết kiệm ~40% storage cost. Cũ hơn 90 ngày → S3 Glacier.
-- ✅ **CloudWatch log retention**: Set 7–14 ngày cho application log (theo security design §15), 14 ngày cho Lambda log — tránh tích lũy log không cần thiết. S3/DynamoDB evidence giữ 30–90 ngày theo retention policy.
-- ✅ **VPC Endpoints cho S3, DynamoDB, Secrets Manager, Bedrock**: Tách làm 2 loại để tối ưu: Gateway Endpoints (S3, DynamoDB - miễn phí) và Interface Endpoints (Secrets Manager, Bedrock - tính phí theo AZ). Giúp tránh traffic qua NAT Gateway, tiết kiệm ~$0.045/GB data transfer và tăng bảo mật (traffic không ra internet).
-- ✅ **AI call gating trong Correlator Worker**: Không gọi AI mỗi alert. Chỉ gọi khi incident mới hoặc severity tăng — giảm Bedrock cost đáng kể.
-
-### Chưa áp dụng (cost vs complexity trade-off)
-
-- ☐ **Spot instances cho node group**: Tiết kiệm ~70% chi phí compute nhưng rủi ro interruption trong demo. Không phù hợp cho capstone environment cần stability. Xem xét post-capstone (chỉ áp dụng nếu chạy cụm riêng tự chi trả node group).
-- ☐ **Reserved capacity**: Cần 1+ năm commit — không phù hợp cho 2 tuần build. Khuyến nghị sau 3 tháng production baseline.
-- ☐ **Bedrock prompt caching**: Phụ thuộc AI group implement — CDO không control. Ghi chú để AI group xem xét.
-- ☐ **KEDA (Kubernetes Event-driven Autoscaling)** theo SQS queue depth: Scale worker pod xuống 0 khi không có alert. Giảm node cost đáng kể. Chưa implement trong MVP do thời gian W11.
+| Dịch vụ AWS | Tiêu chí tính phí | Đơn giá (us-east-1) | Số lượng / Baseline | $/Giờ | $/Tháng (730h) |
+|---|---|---|---|---|---|
+| **EKS Control Plane** | Phí quản lý cụm (Cluster fee) | $0.10 / giờ | 1 cụm | $0.1000 | $73.00 |
+| **EKS Worker Nodes** | `m7i-flex.large` On-Demand | $0.0768 / giờ | 3 instances (1 per AZ) | $0.2304 | $168.19 |
+| **EKS Disk (EBS)** | Lưu trữ ổ đĩa gp3 EBS | $0.08 / GiB-tháng | 3 × 30 GiB | $0.0099 | $7.20 |
+| **VPC NAT Gateways** | Phí duy trì NAT Gateway | $0.045 / giờ | 3 NAT Gateways (1 per AZ) | $0.1350 | $98.55 |
+| **VPC Interface Endpoints** | Kết nối PrivateLink | $0.01 / AZ / giờ / endpoint | 8 endpoints × 3 AZs | $0.2400 | $175.20 |
+| **VPC Gateway Endpoints** | Điểm cuối S3 & DynamoDB | Miễn phí | 2 Gateway Endpoints | $0.0000 | $0.00 |
+| **AWS WAF** | Base cost Web ACL + Rules | $5.00 / ACL + $1.00 / Rule | 1 Web ACL + 1 Rule | — | $6.00 |
+| **Secrets Manager** | Lưu trữ secret đang hoạt động | $0.40 / secret-tháng | 5 secrets | — | $2.00 |
+| **AWS KMS** | Khóa mã hóa do khách hàng quản lý | $1.00 / khóa-tháng | 1 khóa | — | $1.00 |
+| **Tổng chi phí cố định** | | | | **~$0.715** | **~$531.14** |
 
 ---
 
-## 4. Cost vs alternatives (cùng task force)
+### 1.3 Ước tính chi phí biến đổi & Phân tích Free Tier (Sandbox & Production)
 
-TF1 có 2 CDO với angle khác nhau. CDO-05 chọn EKS-native, CDO còn lại chọn Serverless-first (Lambda-heavy).
+Các chi phí sử dụng thực tế này thay đổi tùy theo lượng alert và traffic. Kịch bản dưới đây giả định baseline là **15,000 alert** (tạo ra khoảng ~2,500 phiên xử lý sự cố/triage) mỗi tháng. AWS cung cấp gói **Free Tier** cho một số dịch vụ, giúp bù đắp đáng kể chi phí trong môi trường Sandbox tải thấp.
 
-| Angle | Fixed cost/month | Variable cost/month | Avg per-tenant (50 tenant) | Win axis |
-|---|---|---|---|---|
-| **CDO-05: EKS-native** | ~$130.80 (cluster + endpoints + base) | Thấp (SQS, DynamoDB, Lambda nhỏ) | ~$3.12 | Ecosystem consistency, Observability depth, Production realism |
-| **CDO khác: Serverless-first** | chưa biết | chưa biết | chưa biết | CDO khác chưa biết |
-
-**Trade-off rõ ràng**:
-- EKS-native có fixed cost cao hơn ($130.80/tháng cluster) nhưng per-invocation cost thấp hơn khi alert volume tăng. Break-even điểm khoảng 50–100 tenant.
-- Serverless-first có fixed cost $0 nhưng per-alert cost cao hơn, đặc biệt khi alert storm xảy ra (50+ alert/phút × Lambda invocation cost).
-
-> ⚠️ **TODO**: Xác nhận số liệu CDO kia khi có — để hoàn thiện bảng so sánh.
+*   **Amazon Bedrock (Nova Micro):**
+    *   Model ID: `us.amazon.nova-micro-v1:0` (Không có Free Tier).
+    *   Đơn giá: $0.000035 / 1,000 input tokens, $0.000140 / 1,000 output tokens.
+    *   Dự báo: 2,500 cuộc gọi AI (trung bình 3k input + 1k output tokens/call) = **~$0.45 / tháng**.
+*   **AWS Lambda (Alert Ingestion):**
+    *   *Giới hạn Free Tier:* 1 triệu yêu cầu miễn phí và 400,000 GB-giây tính toán mỗi tháng (miễn phí vĩnh viễn).
+    *   Đơn giá: $0.20 / 1M yêu cầu + thời gian thực thi ($0.00001667 / GB-giây).
+    *   Dự báo: 15,000 lần thực thi (thời gian chạy cực ngắn) = **$0.00** (được bao phủ hoàn toàn bởi Free Tier; nếu không có Free Tier sẽ tốn khoảng ~$0.05 / tháng).
+*   **Amazon SQS:**
+    *   *Giới hạn Free Tier:* 1 triệu yêu cầu Standard miễn phí mỗi tháng (miễn phí vĩnh viễn).
+    *   Đơn giá: $0.40 / 1M yêu cầu.
+    *   Dự báo: Nằm hoàn toàn trong hạn mức Free Tier = **$0.00 / tháng**.
+*   **Amazon DynamoDB (On-Demand):**
+    *   *Lưu ý về Free Tier:* DynamoDB chỉ cung cấp Free Tier (25 GB lưu trữ, 25 WCU và 25 RCU) cho chế độ Provisioned Capacity. Chế độ On-Demand không được áp dụng hạn mức miễn phí này.
+    *   Đơn giá: $1.25 / 1M WCUs, $0.25 / 1M RCUs, $0.25 / GB-tháng.
+    *   Dự báo: ~150,000 lượt đọc/ghi + 2 GB lưu trữ dữ liệu trạng thái = **~$0.75 / tháng**.
+*   **Amazon S3 (Lưu trữ bằng chứng/Audit Logs):**
+    *   *Giới hạn Free Tier:* 5 GB lưu trữ Standard + 2,000 yêu cầu PUT + 20,000 yêu cầu GET mỗi tháng (miễn phí trong 12 tháng đầu).
+    *   Đơn giá: $0.023 / GB-tháng (Standard tier) + chi phí cuộc gọi API.
+    *   Dự báo (Môi trường Sandbox năm đầu): Được bao phủ dưới Free Tier = **$0.00 / tháng** (nếu hết hạn Free Tier sẽ khoảng ~$0.60 / tháng).
+*   **Amazon ECR (Lưu trữ ảnh Docker):**
+    *   *Giới hạn Free Tier:* 500 MB lưu trữ private repository mỗi tháng (miễn phí trong 12 tháng đầu).
+    *   Đơn giá: $0.10 / GB-tháng.
+    *   Dự báo: ~1.5 GB dung lượng ảnh Docker (AI Engine, Platform Service, Simulator) = **~$0.10 / tháng** (sau khi trừ đi 500 MB miễn phí).
+*   **CloudWatch Logs:**
+    *   *Giới hạn Free Tier:* 5 GB log nhập vào + 5 GB log lưu trữ mỗi tháng (miễn phí vĩnh viễn).
+    *   Đơn giá: $0.50 / GB nhập vào + $0.03 / GB-tháng lưu trữ.
+    *   Dự báo: ~10 GB logs phát sinh từ cụm EKS & các dịch vụ AWS = **~$2.50 / tháng** (sau khi trừ đi 5 GB miễn phí; nếu không có Free Tier sẽ là ~$5.30 / tháng).
+*   **Truyền tải dữ liệu (NAT Gateway / PrivateLink Traffic):**
+    *   *Giới hạn Free Tier:* Không áp dụng Free Tier cho phí xử lý dữ liệu qua NAT Gateway/PrivateLink.
+    *   Đơn giá: $0.045 / GB (NAT Gateway) + $0.01 / GB (PrivateLink).
+    *   Dự báo: ~30 GB dữ liệu truyền tải = **~$1.65 / tháng**.
 
 ---
 
-## 5. Measured actual (Pack #2 only — fill in W12)
+## 2. So sánh chi phí với phương án thay thế (Task Force Comparison)
 
-### 5.1 2-week capstone spend
+Task Force 1 đánh giá hai hướng tiếp cận kiến trúc khác nhau cho CDO: **EKS-native (CDO-05)** và **Serverless-first (CDO còn lại)**.
 
-> ⚠️ **TODO (fill W12 T4)**: Section này fill sau khi build xong. Xem AWS Cost Explorer theo tag `Project=tf1-cdo05`.
-
-| Service | Forecast 2 tuần | Actual | Delta |
+| Tiêu chí | CDO-05: EKS-Native (Sandbox) | Giải pháp thay thế: Serverless-First | Phân tích ưu thế |
 |---|---|---|---|
-| EKS control plane | ~$14 | — | — |
-| ALB | ~$2 | — | — |
-| Lambda (Ingest) | ~$0.50 | — | — |
-| SQS | ~$0.10 | — | — |
-| DynamoDB | ~$0.50 | — | — |
-| S3 | ~$0.10 | — | — |
-| CloudWatch | ~$2 | — | — |
-| VPC Gateway Endpoints | $0 | — | — |
-| VPC Interface Endpoints | ~$8.40 | — | — |
-| Bedrock | <!-- TODO --> | — | — |
-| **Total** | **~$27.60 + Bedrock** | — | — |
+| **Chi phí cố định / Tháng** | ~$342.58 | ~$0.00 | **Serverless-First** (Chi phí bắt đầu bằng không) |
+| **Chi phí biến đổi / Tháng** | Rất thấp (chia sẻ tài nguyên dùng chung) | Cao (chi phí tăng theo số lần thực thi khi tải lớn) | **EKS-Native** (rất kinh tế khi tải cao) |
+| **Chi phí Giám sát (Observability)** | Thấp (Prometheus/Loki chạy trực tiếp trong cụm) | Cao (phụ thuộc vào CloudWatch Logs/Metrics đắt đỏ) | **EKS-Native** (miễn phí cho các công cụ in-cluster) |
+| **Kiểm soát Bảo mật (Security)** | Sử dụng Gatekeeper, RBAC, IRSA đồng nhất | IAM-centric, API Gateway custom policies phức tạp | **EKS-Native** (hệ thống chính sách K8s nhất quán) |
 
-### 5.2 Per-tenant actual
-
-> ⚠️ **TODO (fill W12 T4)**: Measure sau khi onboard ≥3 tenant test và chạy load test.
-
-| Tenant test | Service mix | $/day | Extrapolate $/month |
-|---|---|---|---|
-| tenant-a (small load) | ~5 alert/ngày | — | — |
-| tenant-b (medium load) | ~20 alert/ngày | — | — |
-| tenant-c (burst load) | ~50+ alert/ngày | — | — |
-
-### 5.3 Cost-per-correct-decision (joint với AI eval)
-
-> ⚠️ **TODO (fill W12 T4)**: Joint với AI group sau khi có eval report từ `../../ai/docs/04_eval_report.md`.
-
-| Metric | Value |
-|---|---|
-| Total AI calls in capstone | — |
-| Correct decisions (confidence ≥ 0.7, RCA verified) | — |
-| Total Bedrock cost | — |
-| **Cost per correct decision** | **—** |
+**Phân tích điểm hòa vốn (Break-Even Point):**
+*   **EKS-Native** chịu mức phí cố định ban đầu cao ($342/tháng Sandbox, $531/tháng Prod) do phí quản lý control plane và các endpoint bảo mật mạng (VPC Endpoints/NAT Gateway).
+*   **Serverless-First** không tốn phí khi hệ thống nhàn rỗi (idle), nhưng chi phí sẽ tăng rất nhanh khi xảy ra "bão alert" (alert storm) - ví dụ 100+ alert/phút kích hoạt hàng loạt Lambda concurrent, SQS queue và phí LCU của API Gateway.
+*   **Kết luận:** Hướng đi EKS-Native trở nên tiết kiệm và tối ưu hơn khi khối lượng alert tăng hoặc số lượng tenant tăng lên (điểm hòa vốn đạt được khi hệ thống đạt khoảng 50-100 tenants hoạt động liên tục).
 
 ---
 
-## Related documents
+## 3. Các biện pháp tối ưu hóa chi phí đã áp dụng
 
-- [`01_requirements_analysis.md`](01_requirements_analysis.md) — NFR targets (budget $100–150/2 tuần, 50 tenant scale) driving cost model
-- [`02_infra_design.md`](02_infra_design.md) — Component list (EKS, ALB, SQS, DynamoDB, S3, Lambda) là nguồn dữ liệu cho §1
-- [`04_deployment_design.md`](04_deployment_design.md) — 2-env strategy (§0.4) là quyết định cost lớn nhất
-- [`07_test_eval_report.md`](07_test_eval_report.md) — Load test results validate cost assumptions trong §5
-- [`08_adrs.md`](08_adrs.md) — ADR-001 (EKS), ADR-002 (DynamoDB on-demand) giải thích cost trade-off
+Các giải pháp sau đã được CDO-05 triển khai để kiểm soát chi phí AWS:
+*   ✅ **Chiến lược 2 Môi trường (Sandbox & Prod)**: Loại bỏ môi trường Staging để tiết kiệm ~$342/tháng, tận dụng môi trường Sandbox làm nơi kiểm thử tích hợp.
+*   ✅ **DynamoDB On-Demand Billing**: Tránh việc lãng phí phí Provisioned Capacity. Chỉ trả tiền trên số lượng đọc/ghi thực tế, đưa chi phí khi nhàn rỗi về $0.
+*   ✅ **Giám sát nội bộ (Prometheus + Loki in-cluster)**: Giữ toàn bộ dữ liệu giám sát trong cụm EKS, tránh việc trả phí dịch vụ quản lý Prometheus/Loki ngoài của AWS.
+*   ✅ **Tối ưu hóa VPC Endpoint**: Sử dụng Gateway Endpoints (miễn phí) cho S3 và DynamoDB. Chỉ sử dụng Interface Endpoints (trả phí) cho các API bắt buộc (`logs`, `sts`, `secretsmanager`, `kms`, `sqs`, `ecr`).
+*   ✅ **Đặt giới hạn Retention cho CloudWatch Logs**: Giới hạn thời gian lưu trữ logs trong 14 ngày (thay vì vô hạn mặc định) để tránh tích lũy dung lượng lưu trữ đắt đỏ qua thời gian.
+*   ✅ **AI Call Gating**: Bộ xử lý Correlator Worker kiểm tra thông tin alert và chỉ gọi AI Bedrock khi phát hiện incident mới hoặc mức độ nghiêm trọng thay đổi, ngăn chặn việc gọi LLM trùng lặp gây lãng phí.
+
+---
+
+## Tài liệu liên quan
+
+*   [`01_requirements_analysis.md`](01_requirements_analysis.md) — Chỉ tiêu phi chức năng (NFR) về ngân sách ($100–150/2 tuần).
+*   [`02_infra_design.md`](02_infra_design.md) — Kiến trúc thành phần hạ tầng chi tiết.
+*   [`04_deployment_design.md`](04_deployment_design.md) — Chiến lược triển khai 2 môi trường.
+*   [`08_adrs.md`](08_adrs.md) — Các quyết định thiết kế (ADR) lựa chọn DynamoDB, KMS và EKS.

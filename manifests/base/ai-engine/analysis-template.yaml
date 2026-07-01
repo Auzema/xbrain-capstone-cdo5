@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: nginx-success-rate
+spec:
+  args:
+    - name: ingress-name
+  metrics:
+    - name: success-rate
+      interval: 1m
+      count: 3
+      # Ngưỡng an toàn: Tỷ lệ thành công phải lớn hơn hoặc bằng 95%
+      successCondition: result[0] >= 0.95
+      failureLimit: 1
+      provider:
+        prometheus:
+          # Địa chỉ mặc định của Prometheus trong cụm k8s (kube-prometheus-stack)
+          address: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local:9090
+          query: >+
+            sum(rate(nginx_ingress_controller_requests{ingress="{{args.ingress-name}}", status=~"2.*|3.*"}[5m]))
+            /
+            sum(rate(nginx_ingress_controller_requests{ingress="{{args.ingress-name}}"}[5m]))

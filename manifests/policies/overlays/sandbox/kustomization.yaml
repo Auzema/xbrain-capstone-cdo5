@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+# Sandbox: Chuyển tất cả constraints sang chế độ WARN (chỉ cảnh báo, không chặn).
+# Giúp Developer thoải mái test mà vẫn nhìn thấy vi phạm policy trong logs.
+patches:
+  - target:
+      group: constraints.gatekeeper.sh
+      version: v1beta1
+      kind: K8sRequiredLabels
+      name: require-app-labels
+    patch: |
+      - op: replace
+        path: /spec/enforcementAction
+        value: warn
+  - target:
+      group: constraints.gatekeeper.sh
+      version: v1beta1
+      kind: K8sContainerLimits
+      name: require-container-limits
+    patch: |
+      - op: replace
+        path: /spec/enforcementAction
+        value: warn
+  - target:
+      group: constraints.gatekeeper.sh
+      version: v1beta1
+      kind: K8sBlockPrivilegedContainer
+      name: block-privileged-containers
+    patch: |
+      - op: replace
+        path: /spec/enforcementAction
+        value: warn

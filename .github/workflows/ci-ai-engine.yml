@@ -1,0 +1,103 @@
+name: CI - AI Engine
+on:
+  push:
+    branches:
+      - "develop"
+      - "release/**"
+      - "hotfix/**"
+      - "feat/**"
+      - "bugfix/**"
+      - "sanbox"
+    paths:
+      - "apps/ai-engine/**"
+  pull_request:
+    branches:
+      - "develop"
+      - "sanbox"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  APP_NAME: "ai-engine"
+  WORKING_DIRECTORY: "apps/ai-engine/capstone/tf-1/ai/engine-skeleton"
+
+jobs:
+  determine-env:
+    runs-on: self-hosted
+    outputs:
+      env_name: ${{ steps.set-env.outputs.env_name }}
+      overlay_path: ${{ steps.set-env.outputs.overlay_path }}
+      ecr_repo: ${{ steps.set-env.outputs.ecr_repo }}
+    steps:
+      - id: set-env
+        run: |
+          PREFIX="${{ vars.ECR_REPO_PREFIX }}"
+          APP="${{ env.APP_NAME }}"
+          # TODO: Add prod/staging logic when those environments are provisioned
+          echo "env_name=sandbox" >> $GITHUB_OUTPUT
+          echo "overlay_path=manifests/overlays/sandbox" >> $GITHUB_OUTPUT
+          echo "ecr_repo=${PREFIX}-sandbox-tf1-${APP}" >> $GITHUB_OUTPUT
+
+  build-push:
+    needs: [determine-env]
+    runs-on: self-hosted
+    outputs:
+      image-tag: ${{ steps.vars.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Generate Tag
+        id: vars
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "tag=${{ needs.determine-env.outputs.env_name }}" >> $GITHUB_OUTPUT
+          else
+            SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+            echo "tag=${{ needs.determine-env.outputs.env_name }}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: AWS Auth
+        uses: ./.github/actions/aws-auth-oidc
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.IAM_ROLE_ARN }}
+
+      - name: Build Docker Image
+        shell: bash
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: |
+          IMAGE=${{ vars.ECR_REGISTRY }}/${{ needs.determine-env.outputs.ecr_repo }}:${{ steps.vars.outputs.tag }}
+          docker build -t $IMAGE .
+
+      # Bypassing Trivy for ai-engine intentionally as requested
+      - name: Push Docker Image
+        shell: bash
+        run: |
+          IMAGE=${{ vars.ECR_REGISTRY }}/${{ needs.determine-env.outputs.ecr_repo }}:${{ steps.vars.outputs.tag }}
+          docker push $IMAGE
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.2.4'
+
+      - name: Sign the images with Cosign
+        shell: bash
+        run: |
+          IMAGE=${{ vars.ECR_REGISTRY }}/${{ needs.determine-env.outputs.ecr_repo }}:${{ steps.vars.outputs.tag }}
+          cosign sign --yes $IMAGE
+
+  cd-update:
+    needs: [determine-env, build-push]
+    if: github.event_name != 'pull_request'
+    uses: ./.github/workflows/_reusable-update-argocd.yml
+    with:
+      app-name: "ai-engine"
+      image-tag: "${{ vars.ECR_REGISTRY }}/${{ needs.determine-env.outputs.ecr_repo }}:${{ needs.build-push.outputs.image-tag }}"
+      overlay-path: ${{ needs.determine-env.outputs.overlay_path }}
+    secrets:
+      GH_PAT: ${{ secrets.GH_PAT }}

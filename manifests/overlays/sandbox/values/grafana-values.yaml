@@ -1,0 +1,7 @@
+# Cấu hình Grafana
+grafana:
+  enabled: true
+  adminPassword: "admin" # Mật khẩu mặc định để test nội bộ
+  ingress:
+    enabled: true # Đã bật NGINX Ingress Controller
+  replicas: 1

@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base/ai-engine
+  - ../../base/platform-service
+  - ../../base/simulator
+
+components:
+  - ../../base/external-secrets
+
+configMapGenerator:
+  - behavior: merge
+    literals:
+      - ENV_NAME=staging
+      - LOG_LEVEL=INFO
+      - AWS_REGION=us-east-1
+      - AI_ENGINE_URL=http://ai-engine:8080
+    name: platform-config
+
+images:
+  - name: ai-engine
+    newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-staging-tf1-ai-engine
+    newTag: latest
+  - name: platform-service
+    newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-staging-tf1-platform-service
+    newTag: latest
+  - name: simulator
+    newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-staging-tf1-simulator
+    newTag: latest
+

@@ -1,0 +1,19 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sRequiredAnnotations
+metadata:
+  name: require-app-annotations
+spec:
+  match:
+    kinds:
+      - apiGroups: ["apps"]
+        kinds: ["Deployment", "StatefulSet", "DaemonSet"]
+      - apiGroups: [""]
+        kinds: ["Service", "Pod"]
+    namespaces:
+      - triage-hub-sandbox
+      - triage-hub-staging
+      - triage-hub-prod
+  parameters:
+    annotations:
+      - key: team
+        allowedRegex: "^(ai|platform)$"
