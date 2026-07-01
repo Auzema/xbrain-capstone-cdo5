@@ -112,9 +112,10 @@ spec:
         path: "manifests/overlays/sandbox" 
         kustomize:
           images:
-            - "platform-service=458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-platform-service:pr-{{.number}}"
-            - "ai-engine=458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-ai-engine:pr-{{.number}}"
-            - "simulator=458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-simulator:pr-{{.number}}"
+            - "platform-service=458580846647.dkr.ecr.us-east-1.amazonaws.com/tf1-triage-hub-sandbox/platform-service:pr-{{.number}}"
+            - "ai-engine=589077667575.dkr.ecr.us-east-1.amazonaws.com/tf1-ai-triage-engine:git-ac21f60"
+            - "simulator=458580846647.dkr.ecr.us-east-1.amazonaws.com/tf1-triage-hub-sandbox/observability-tools:pr-{{.number}}"
+            - "correlator-worker=458580846647.dkr.ecr.us-east-1.amazonaws.com/tf1-triage-hub-sandbox/correlator-worker:pr-{{.number}}"
       destination:
         server: "https://kubernetes.default.svc"
         namespace: "xbrain-cdo5-pr-{{.number}}"

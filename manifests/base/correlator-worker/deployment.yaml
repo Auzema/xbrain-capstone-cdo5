@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: correlator-worker
+  labels:
+    app: correlator-worker
+    app.kubernetes.io/name: correlator-worker
+    app.kubernetes.io/part-of: xbrain-cdo5
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: correlator-worker
+  template:
+    metadata:
+      labels:
+        app: correlator-worker
+      annotations:
+        team: platform
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      serviceAccountName: correlator-worker
+      containers:
+        - name: correlator-worker
+          image: correlator-worker:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          envFrom:
+            - configMapRef:
+                name: platform-config
+            - secretRef:
+                name: platform-secrets-synced
+          env:
+            - name: NORMALIZED_ALERTS_QUEUE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets-synced
+                  key: SQS_QUEUE_URL

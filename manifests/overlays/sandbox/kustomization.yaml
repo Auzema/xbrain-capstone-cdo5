@@ -5,6 +5,7 @@ resources:
 - ../../base/ai-engine
 - ../../base/platform-service
 - ../../base/simulator
+- ../../base/correlator-worker
 
 components:
 - ../../base/external-secrets
@@ -16,15 +17,34 @@ configMapGenerator:
   - LOG_LEVEL=DEBUG
   - AWS_REGION=us-east-1
   - AI_ENGINE_URL=http://ai-engine:8080
+  - CDO_EVIDENCE_ROOT_URI=s3://tf1-triage-hub-sandbox-audit-20260701172515973400000001
+  - CDO_EVIDENCE_OUTPUT_PREFIX=evidence
+  - CDO_STATE_URI=s3://tf1-triage-hub-sandbox-audit-20260701172515973400000001/state/open-incidents.json
+  - CDO_INCIDENT_OUTPUT_PREFIX=incident
+  - CDO_TRIAGE_REQUEST_OUTPUT_PREFIX=triage-request
+  - AIO_TRIAGE_URL=http://ai-engine:8080/v1/triage
   name: platform-config
 
 images:
 - name: ai-engine
-  newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-ai-engine
-  newTag: sandbox-1518bd8
+  newName: 589077667575.dkr.ecr.us-east-1.amazonaws.com/tf1-ai-triage-engine
+  newTag: git-ac21f60
 - name: platform-service
-  newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-platform-service
-  newTag: sandbox-843da53
+  newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/tf1-triage-hub-sandbox/platform-service
+  newTag: latest
 - name: simulator
-  newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-simulator
+  newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/tf1-triage-hub-sandbox/observability-tools
   newTag: sandbox-171a02e
+- name: correlator-worker
+  newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/tf1-triage-hub-sandbox/correlator-worker
+  newTag: latest
+
+patches:
+- target:
+    kind: ServiceAccount
+    name: correlator-worker
+  patch: |-
+    - op: add
+      path: /metadata/annotations
+      value:
+        eks.amazonaws.com/role-arn: arn:aws:iam::458580846647:role/tf1-triage-hub-sandbox-correlator-worker-irsa
