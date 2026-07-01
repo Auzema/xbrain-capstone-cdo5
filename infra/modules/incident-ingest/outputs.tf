@@ -3,5 +3,5 @@ output "webhook_url" {
 }
 
 output "lambda_arn" {
-  value = module.lambda_function.lambda_function_arn
+  value = aws_lambda_function.this.arn
 }
