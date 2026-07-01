@@ -26,7 +26,7 @@ spec:
               - $values/manifests/overlays/{{env}}/values/grafana-values.yaml
 
         - repoURL: "https://github.com/Auzema/xbrain-capstone-cdo5.git"
-          targetRevision: HEAD
+          targetRevision: feat/deployment
           ref: values
       destination:
         server: https://kubernetes.default.svc
@@ -49,7 +49,7 @@ spec:
   generators:
     - git:
         repoURL: "https://github.com/Auzema/xbrain-capstone-cdo5.git"
-        revision: HEAD
+        revision: feat/deployment
         directories:
           - path: "manifests/overlays/*"
   template:
@@ -61,7 +61,7 @@ spec:
       project: triage-hub-project
       source:
         repoURL: "https://github.com/Auzema/xbrain-capstone-cdo5.git"
-        targetRevision: HEAD
+        targetRevision: feat/deployment
         path: "{{.path.path}}"
       destination:
         server: "https://kubernetes.default.svc"
@@ -156,7 +156,7 @@ spec:
             valueFiles:
               - $values/manifests/overlays/{{env}}/values/nginx-values.yaml
         - repoURL: "https://github.com/Auzema/xbrain-capstone-cdo5.git"
-          targetRevision: HEAD
+          targetRevision: feat/deployment
           ref: values
       destination:
         server: https://kubernetes.default.svc
@@ -190,7 +190,7 @@ spec:
       project: security-project
       source:
         repoURL: "https://github.com/Auzema/xbrain-capstone-cdo5.git"
-        targetRevision: HEAD
+        targetRevision: feat/deployment
         path: "manifests/policies/overlays/{{env}}"
       destination:
         server: https://kubernetes.default.svc
@@ -214,7 +214,7 @@ spec:
   project: security-project
   source:
     repoURL: "https://github.com/Auzema/xbrain-capstone-cdo5.git"
-    targetRevision: HEAD
+    targetRevision: feat/deployment
     path: "manifests/argocd/rbac"
   destination:
     server: https://kubernetes.default.svc
