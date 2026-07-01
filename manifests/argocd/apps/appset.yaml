@@ -93,7 +93,7 @@ spec:
   generators:
     - pullRequest:
         github:
-          owner: me-dangnhatminh
+          owner: Auzema
           repo: xbrain-capstone-cdo5
           tokenRef:
             secretName: github-token

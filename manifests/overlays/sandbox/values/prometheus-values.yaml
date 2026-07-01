@@ -6,16 +6,7 @@ defaultRules:
 alertmanager:
   enabled: true
 
-# 3. Cấu hình Grafana
-grafana:
-  enabled: true
-  adminPassword: "admin" # Mật khẩu mặc định để test nội bộ
-  ingress:
-    enabled: true # Đã bật NGINX Ingress Controller
-  # Tắt HA (High Availability) cho Grafana ở Sandbox
-  replicas: 1
-
-# 4. Cấu hình Prometheus cốt lõi (Cắt giảm tài nguyên)
+# 3. Cấu hình Prometheus cốt lõi (Cắt giảm tài nguyên)
 prometheus:
   prometheusSpec:
     # Ở Sandbox, chỉ cần lưu dữ liệu trong 3 ngày là đủ (Mặc định là 15 ngày)
