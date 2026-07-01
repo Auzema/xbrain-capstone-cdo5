@@ -43,7 +43,7 @@ variable "az_count" {
 variable "enable_nat_gateway" {
   description = "Enable NAT Gateway for private subnet internet egress. Needed if pods call public Slack/Jira directly."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "public_alb_allowed_cidrs" {
@@ -248,7 +248,7 @@ variable "enable_ingest_lambda_function_url" {
 variable "ingest_function_url_auth_type" {
   description = "Lambda Function URL auth type: AWS_IAM or NONE."
   type        = string
-  default     = "AWS_IAM"
+  default     = "NONE"
 
   validation {
     condition     = contains(["AWS_IAM", "NONE"], var.ingest_function_url_auth_type)

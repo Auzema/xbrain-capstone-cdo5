@@ -43,6 +43,18 @@ output "incident_queue_arn" {
   value = module.queue.incident_queue_arn
 }
 
+output "normalized_alerts_queue_url" {
+  value = module.queue.normalized_alerts_queue_url
+}
+
+output "normalized_alerts_queue_arn" {
+  value = module.queue.normalized_alerts_queue_arn
+}
+
+output "normalized_alerts_queue_name" {
+  value = module.queue.normalized_alerts_queue_name
+}
+
 output "incident_dlq_url" {
   value = module.queue.incident_dlq_url
 }
@@ -51,16 +63,20 @@ output "incident_state_table_name" {
   value = module.storage.incident_state_table_name
 }
 
+output "idempotency_table_name" {
+  value = module.storage.idempotency_table_name
+}
+
 output "audit_bucket_name" {
   value = module.storage.audit_bucket_name
 }
 
 output "ingest_lambda_name" {
-  value = module.incident_ingest.function_name
+  value = module.ingest_lambda.function_name
 }
 
 output "ingest_lambda_function_url" {
-  value = module.incident_ingest.function_url
+  value = module.ingest_lambda.function_url
 }
 
 output "correlator_worker_role_arn" {

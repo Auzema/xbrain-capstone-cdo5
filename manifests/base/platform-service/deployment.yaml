@@ -1,0 +1,68 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: platform-service
+  labels:
+    app: platform-service
+    app.kubernetes.io/name: platform-service
+    app.kubernetes.io/part-of: xbrain-cdo5
+spec:
+  selector:
+    matchLabels:
+      app: platform-service
+  strategy:
+    canary:
+      stableService: platform-service
+      canaryService: platform-service-canary
+      trafficRouting:
+        nginx:
+          stableIngress: platform-service-ingress
+      steps:
+        - setWeight: 100
+  template:
+    metadata:
+      labels:
+        app: platform-service
+      annotations:
+        team: platform
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      serviceAccountName: platform-sa
+      containers:
+        - name: platform-service
+          image: platform-service:latest
+          ports:
+            - containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          envFrom:
+            - configMapRef:
+                name: platform-config
+            - secretRef:
+                name: platform-secrets-synced
+
+          # K8s gọi API /health để kiểm tra ứng dụng có sống không
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10

@@ -1,0 +1,19 @@
+# Cấu hình cài đặt NGINX Ingress Controller
+controller:
+  # Bật tính năng đo lường (Metrics) để phục vụ cho Canary Rollouts
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      # Tự động tạo ServiceMonitor và đính kèm nhãn (label) để Prometheus phát hiện
+      additionalLabels:
+        release: "kube-prometheus-stack"
+  
+  # Giới hạn tài nguyên ở Sandbox để tiết kiệm
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi

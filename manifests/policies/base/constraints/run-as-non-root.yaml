@@ -1,0 +1,16 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sPSPAllowedUsers
+metadata:
+  name: run-as-non-root
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    namespaces:
+      - triage-hub-sandbox
+      - triage-hub-staging
+      - triage-hub-prod
+  parameters:
+    runAsUser:
+      rule: MustRunAsNonRoot

@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+- external-secrets.yaml
+
+replacements:
+- source:
+    kind: ConfigMap
+    name: platform-config
+    fieldPath: data.AWS_REGION
+  targets:
+  - select:
+      kind: ClusterSecretStore
+      name: aws-parameter-store
+    fieldPaths:
+    - spec.provider.aws.region
+
+- source:
+    kind: ConfigMap
+    name: platform-config
+    fieldPath: data.ENV_NAME
+  targets:
+  - select:
+      kind: ExternalSecret
+      name: platform-secrets
+    fieldPaths:
+    - spec.data.*.remoteRef.key
+    options:
+      delimiter: '/'
+      index: 2

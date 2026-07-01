@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: platform-service-ingress
+  labels:
+    app.kubernetes.io/name: platform-service
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+  - host: platform.cdo5.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: platform-service
+            port:
+              number: 80

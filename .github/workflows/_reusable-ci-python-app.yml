@@ -1,0 +1,121 @@
+name: Reusable CI Python App
+on:
+  workflow_call:
+    inputs:
+      app_name:
+        required: true
+        type: string
+        description: "Name of the app (e.g. ai-engine)"
+      working_directory:
+        required: true
+        type: string
+        description: "Path to the app directory (e.g. apps/ai-engine)"
+    secrets:
+      GH_PAT:
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  test:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - name: Install dependencies
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov || true
+      - name: Run Pytest
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          if [ -d "tests" ]; then
+            PYTHONPATH=. pytest tests/
+          else
+            echo "No tests directory found. Skipping tests."
+          fi
+
+  determine-env:
+    runs-on: self-hosted
+    outputs:
+      env_name: ${{ steps.set-env.outputs.env_name }}
+      overlay_path: ${{ steps.set-env.outputs.overlay_path }}
+      ecr_repo: ${{ steps.set-env.outputs.ecr_repo }}
+    steps:
+      - id: set-env
+        run: |
+          PREFIX="${{ vars.ECR_REPO_PREFIX }}"
+          APP="${{ inputs.app_name }}"
+          EVENT_NAME="${{ github.event_name }}"
+          
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BRANCH="${{ github.base_ref }}"
+          else
+            BRANCH="${GITHUB_REF_NAME}"
+          fi
+          
+          if [[ "$BRANCH" == "main" ]]; then
+            ENV_NAME="prod"
+          elif [[ "$BRANCH" == release/* || "$BRANCH" == hotfix/* ]]; then
+            ENV_NAME="staging"
+          else
+            ENV_NAME="sandbox"
+          fi
+          
+          echo "env_name=${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "overlay_path=manifests/overlays/${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "ecr_repo=${PREFIX}-${ENV_NAME}-tf1-${APP}" >> $GITHUB_OUTPUT
+
+  build-push:
+    needs: [test, determine-env]
+    runs-on: self-hosted
+    outputs:
+      image-tag: ${{ steps.vars.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Generate Tag
+        id: vars
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_NUM="${{ github.event.pull_request.number }}"
+            echo "tag=pr-${PR_NUM}" >> $GITHUB_OUTPUT
+          else
+            SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+            echo "tag=${{ needs.determine-env.outputs.env_name }}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: AWS Auth
+        uses: ./.github/actions/aws-auth-oidc
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.IAM_ROLE_ARN }}
+      
+      - name: Build, Scan, Push & Sign
+        uses: ./.github/actions/build-push-ecr
+        with:
+          working-directory: ${{ inputs.working_directory }}
+          ecr-registry: ${{ vars.ECR_REGISTRY }}
+          ecr-repo: ${{ needs.determine-env.outputs.ecr_repo }}
+          image-tag: ${{ steps.vars.outputs.tag }}
+
+  cd-update:
+    needs: [determine-env, build-push]
+    if: github.event_name != 'pull_request'
+    uses: ./.github/workflows/_reusable-update-argocd.yml
+    with:
+      app-name: ${{ inputs.app_name }}
+      image-tag: "${{ vars.ECR_REGISTRY }}/${{ needs.determine-env.outputs.ecr_repo }}:${{ needs.build-push.outputs.image-tag }}"
+      overlay-path: ${{ needs.determine-env.outputs.overlay_path }}
+    secrets:
+      GH_PAT: ${{ secrets.GH_PAT }}
