@@ -21,6 +21,10 @@ resource "aws_ecr_repository" "repos" {
   tags = {
     Name = "${var.name_prefix}-${each.value}"
   }
+
+  lifecycle {
+    ignore_changes = [encryption_configuration]
+  }
 }
 
 resource "aws_ecr_lifecycle_policy" "repos" {
@@ -45,4 +49,3 @@ resource "aws_ecr_lifecycle_policy" "repos" {
     ]
   })
 }
-
