@@ -33,11 +33,9 @@ variable "private_subnet_cidrs" {
   default = ["10.0.3.0/24", "10.0.4.0/24"]
 }
 
-
-
 variable "cluster_version" {
   type    = string
-  default = "1.29"
+  default = "1.31"
 }
 
 variable "instance_type" {
@@ -81,4 +79,121 @@ variable "backend_devs_role_arn" {
 variable "ecr_repositories" {
   type    = list(string)
   default = ["tf1-platform-service", "tf1-ai-engine", "tf1-simulator"]
+}
+
+# --- New Variables for Wiring ---
+
+variable "enable_kms" {
+  type    = bool
+  default = true
+}
+
+variable "enable_vpc_endpoints" {
+  type    = bool
+  default = true
+}
+
+variable "public_alb_allowed_cidrs" {
+  type    = list(string)
+  default = ["0.0.0.0/0"]
+}
+
+variable "app_target_port" {
+  type    = number
+  default = 8080
+}
+
+variable "ai_engine_port" {
+  type    = number
+  default = 8000
+}
+
+variable "otel_grpc_port" {
+  type    = number
+  default = 4317
+}
+
+variable "otel_http_port" {
+  type    = number
+  default = 4318
+}
+
+variable "enable_s3_object_lock" {
+  type    = bool
+  default = false
+}
+
+variable "s3_object_lock_retention_days" {
+  type    = number
+  default = 1
+}
+
+variable "audit_retention_days" {
+  type    = number
+  default = 30
+}
+
+variable "dynamodb_ttl_attribute" {
+  type    = string
+  default = "expires_at"
+}
+
+variable "visibility_timeout_seconds" {
+  type    = number
+  default = 30
+}
+
+variable "max_receive_count" {
+  type    = number
+  default = 3
+}
+
+variable "message_retention_seconds" {
+  type    = number
+  default = 86400
+}
+
+variable "enable_worker_dlq_replay_permissions" {
+  type    = bool
+  default = true
+}
+
+variable "enable_ai_bedrock_policy" {
+  type    = bool
+  default = false
+}
+
+variable "bedrock_model_arns" {
+  type    = list(string)
+  default = []
+}
+
+variable "alarm_email" {
+  type    = string
+  default = ""
+}
+
+variable "dlq_alarm_threshold" {
+  type    = number
+  default = 1
+}
+
+variable "queue_age_alarm_seconds" {
+  type    = number
+  default = 3600
+}
+
+variable "enable_waf" {
+  type    = bool
+  default = false
+}
+
+variable "waf_rate_limit" {
+  type    = number
+  default = 1000
+}
+
+variable "enable_cloudtrail" {
+  type    = bool
+  default = false
 }

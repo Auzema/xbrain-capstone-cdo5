@@ -12,3 +12,7 @@ output "public_subnet_ids" {
   description = "The IDs of the public subnets"
   value       = module.vpc.public_subnets
 }
+
+output "vpc_endpoint_security_group_id" {
+  value = module.vpc_endpoints_sg.security_group_id
+}

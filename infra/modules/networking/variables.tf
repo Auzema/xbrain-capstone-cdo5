@@ -49,3 +49,15 @@ variable "eks_cluster_name" {
   description = "Name of the EKS cluster (used for subnet tags)"
   type        = string
 }
+
+variable "enable_vpc_endpoints" {
+  description = "Enable VPC endpoints for AWS services"
+  type        = bool
+  default     = false
+}
+
+variable "enable_bedrock_endpoint" {
+  description = "Enable VPC endpoint for AWS Bedrock"
+  type        = bool
+  default     = false
+}

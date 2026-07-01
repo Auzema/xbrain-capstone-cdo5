@@ -12,19 +12,16 @@ variable "environment" {
   }
 }
 
+variable "partition" { type = string }
 variable "vpc_id" { type = string }
-variable "subnet_ids" { type = list(string) }
+variable "private_subnet_ids" { type = list(string) }
 
 variable "cluster_name" { type = string }
 variable "cluster_version" { type = string }
 
-variable "instance_type" { type = string }
-variable "scaling_config" {
-  type = object({
-    desired_size = number
-    max_size     = number
-    min_size     = number
-  })
+variable "node_groups" {
+  description = "Map of EKS managed node group definitions"
+  type        = any
 }
 
 variable "admin_role_arn" { type = string }
@@ -39,5 +36,15 @@ variable "backend_devs_role_arn" {
 variable "cluster_endpoint_public_access_cidrs" {
   description = "List of CIDR blocks which can access the Amazon EKS public API server endpoint"
   type        = list(string)
-  default     = null
+  default     = ["0.0.0.0/0"]
+}
+variable "cluster_endpoint_public_access" { type = bool }
+variable "cluster_endpoint_private_access" { type = bool }
+
+variable "enable_ebs_csi_addon" { type = bool }
+variable "log_retention_days" { type = number }
+variable "enable_kms" { type = bool }
+variable "kms_key_arn" {
+  type    = string
+  default = null
 }

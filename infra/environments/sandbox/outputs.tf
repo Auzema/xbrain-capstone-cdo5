@@ -29,12 +29,12 @@ output "ecr_repository_urls" {
 # ==========================================
 output "sqs_queue_url" {
   description = "URL of the Incident SQS FIFO Queue"
-  value       = module.incident_ingest.sqs_queue_url
+  value       = module.queue.incident_queue_url
 }
 
 output "ingest_webhook_url" {
   description = "Public URL of the Ingest Lambda Webhook"
-  value       = module.incident_ingest.apigw_url
+  value       = module.incident_ingest.webhook_url
 }
 
 # ==========================================

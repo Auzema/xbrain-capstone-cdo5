@@ -1,22 +1,20 @@
-variable "prefix" {
-  type        = string
-  description = "Prefix for resource naming"
-}
-
+variable "project" { type = string }
 variable "tags" {
+  description = "Common resource tags"
   type        = map(string)
-  description = "Tags to apply to resources"
   default     = {}
+}
+variable "environment" {
+  type = string
+  validation {
+    condition     = contains(["sandbox", "staging", "prod"], var.environment)
+    error_message = "Environment must be one of: sandbox, staging, prod"
+  }
 }
 
 variable "lambda_source_dir" {
   type        = string
   description = "Path to the Lambda function source code directory"
-}
-
-variable "lambda_zip_output_path" {
-  type        = string
-  description = "Path where the zipped Lambda code should be saved"
 }
 
 variable "lambda_handler" {
@@ -28,16 +26,26 @@ variable "lambda_handler" {
 variable "lambda_runtime" {
   type        = string
   description = "The runtime for the Lambda function"
-  default     = "python3.11"
-}
-
-variable "sqs_visibility_timeout" {
-  type        = number
-  description = "Visibility timeout for SQS in seconds"
-  default     = 300
+  default     = "python3.12"
 }
 
 variable "ssm_parameter_prefix" {
   type        = string
   description = "Prefix for SSM Parameter names (e.g. /project/environment)"
 }
+
+variable "aws_region" { type = string }
+variable "account_id" { type = string }
+variable "partition" { type = string }
+variable "incident_queue_url" { type = string }
+variable "incident_queue_arn" { type = string }
+variable "webhook_signing_secret_arn" { type = string }
+variable "audit_bucket_name" { type = string }
+variable "log_group_name" { type = string }
+variable "log_retention_days" { type = number }
+variable "enable_kms" { type = bool }
+variable "kms_key_arn" {
+  type    = string
+  default = null
+}
+variable "lambda_reserved_concurrency" { type = number }

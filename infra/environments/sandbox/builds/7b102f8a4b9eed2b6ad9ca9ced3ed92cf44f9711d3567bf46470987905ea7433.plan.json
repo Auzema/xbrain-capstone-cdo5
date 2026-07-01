@@ -1,0 +1,1 @@
+{"filename": "builds/7b102f8a4b9eed2b6ad9ca9ced3ed92cf44f9711d3567bf46470987905ea7433.zip", "runtime": "python3.12", "artifacts_dir": "builds", "build_plan": [["zip", "./../../../apps/ingest-lambda", null]]}
