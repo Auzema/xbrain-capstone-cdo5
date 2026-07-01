@@ -17,6 +17,8 @@ class AiEngineClient(IAiClient):
             "X-Correlation-Id": request.correlation_id,
             "Content-Type": "application/json"
         }
+        if config.AI_ENGINE_TOKEN:
+            headers["Authorization"] = f"Bearer {config.AI_ENGINE_TOKEN}"
         
         async with httpx.AsyncClient(timeout=30.0) as client:
             try:

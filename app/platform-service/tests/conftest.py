@@ -25,6 +25,8 @@ def mock_incident_payload():
 
 @pytest.fixture
 def mock_sqs_queue():
+    # Because moto might not be available or setup, we can just mock the sqs client entirely
+    # But since the tests use moto, let's provide a basic moto sqs queue
     from moto import mock_aws
     import boto3
     with mock_aws():

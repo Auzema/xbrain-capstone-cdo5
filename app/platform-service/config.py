@@ -13,6 +13,7 @@ class AppConfig:
 
     # AI Engine
     AI_ENGINE_URL: str = os.getenv("AI_ENGINE_URL", "http://ai-engine:8080")
+    AI_ENGINE_TOKEN: str = os.getenv("AI_ENGINE_TOKEN", os.getenv("SERVICE_AUTH_TOKEN", ""))
 
     # Slack Config
     SLACK_WEBHOOK_URL: str = os.getenv("SLACK_WEBHOOK_URL", "")
@@ -20,7 +21,7 @@ class AppConfig:
     # Jira Config
     JIRA_URL: str = os.getenv("JIRA_URL", "")
     JIRA_USER: str = os.getenv("JIRA_USER", "")
-    JIRA_TOKEN: str = os.getenv("JIRA_TOKEN", "")
+    JIRA_TOKEN: str = os.getenv("JIRA_TOKEN", os.getenv("JIRA_API_TOKEN", ""))
     JIRA_PROJECT_KEY: str = os.getenv("JIRA_PROJECT_KEY", "OPS")
 
 # Singleton config instance dùng chung toàn app

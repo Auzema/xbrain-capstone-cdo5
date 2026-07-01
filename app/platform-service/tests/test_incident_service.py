@@ -85,3 +85,46 @@ class TestIncidentServiceHandle:
         service, _, _, notifier_mock = make_service()
         await service.handle(make_report())
         notifier_mock.notify.assert_called_once()
+
+    async def test_ai_engine_failure_fallback(self):
+        service, ai_mock, ticket_mock, notifier_mock = make_service()
+        ai_mock.triage.side_effect = Exception("AI Engine is down")
+        
+        result = await service.handle(make_report())
+        
+        assert result["status"] == "fallback"
+        ticket_mock.create_ticket.assert_called_once()
+        assert "[Fallback]" in ticket_mock.create_ticket.call_args.kwargs["summary"]
+        notifier_mock.notify.assert_called_once()
+        assert "⚠️" in notifier_mock.notify.call_args.args[0]
+
+    async def test_jira_creator_failure_fallback(self):
+        service, _, ticket_mock, notifier_mock = make_service()
+        ticket_mock.create_ticket.side_effect = Exception("Jira is down")
+        
+        result = await service.handle(make_report())
+        
+        assert result["ticket_id"].startswith("OPS-FAIL-")
+        notifier_mock.notify.assert_called_once()
+        assert "OPS-FAIL-" in notifier_mock.notify.call_args.args[0]
+
+    async def test_slack_notifier_failure_graceful(self):
+        service, _, _, notifier_mock = make_service()
+        notifier_mock.notify.side_effect = Exception("Slack is down")
+        
+        # Should not raise exception
+        result = await service.handle(make_report())
+        assert result["status"] == "success"
+
+    async def test_slack_notification_contains_suggested_assignee(self):
+        service, ai_mock, _, notifier_mock = make_service()
+        # Mock AI response to include suggested assignee details
+        ai_mock.triage.return_value.suggested_assignee_account_id = "user-123"
+        ai_mock.triage.return_value.suggestion_reason = "SME for this service"
+        
+        await service.handle(make_report())
+        
+        notifier_mock.notify.assert_called_once()
+        message = notifier_mock.notify.call_args.args[0]
+        assert "*Suggested Assignee (Jira Account ID):* user-123" in message
+        assert "SME for this service" in message
