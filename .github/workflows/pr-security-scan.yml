@@ -15,7 +15,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Install Gitleaks
+        run: |
+          GITLEAKS_VERSION="8.24.3"
+          curl -sSfL \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /tmp gitleaks
+          echo "Gitleaks version: $(/tmp/gitleaks version)"
+
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          /tmp/gitleaks detect \
+            --redact \
+            --verbose \
+            --exit-code=1 \
+            --log-level=info
