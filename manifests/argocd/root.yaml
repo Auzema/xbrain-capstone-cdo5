@@ -14,7 +14,7 @@ spec:
 
   source:
     repoURL: https://github.com/Auzema/xbrain-capstone-cdo5.git
-    targetRevision: HEAD
+    targetRevision: feat/deployment
     path: manifests/argocd/apps
 
   destination:
