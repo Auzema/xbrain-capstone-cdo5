@@ -59,8 +59,10 @@ jobs:
         with:
           name: tfplan-${{ inputs.environment }}
           path: |
-            ${{ inputs.tf_working_dir }}/tfplan
-            ${{ inputs.tf_working_dir }}/.temp/**/*.zip
+            ${{ inputs.tf_working_dir }}
+            !${{ inputs.tf_working_dir }}/.terraform/**
+            !${{ inputs.tf_working_dir }}/.terraform*
+            !${{ inputs.tf_working_dir }}/**/*.tf
           retention-days: 1
 
       - name: Save Plan Output
