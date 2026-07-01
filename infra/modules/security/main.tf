@@ -57,6 +57,9 @@ module "secrets" {
   kms_key_id              = var.enable_kms ? module.kms.key_arn : null
   recovery_window_in_days = var.environment == "prod" ? 7 : 0
 
+  secret_string         = "placeholder"
+  ignore_secret_changes = true
+
   tags = merge(var.tags, {
     Name = each.value
   })

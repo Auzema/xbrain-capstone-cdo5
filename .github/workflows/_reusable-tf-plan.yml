@@ -58,7 +58,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ inputs.environment }}
-          path: ${{ inputs.tf_working_dir }}/tfplan
+          path: |
+            ${{ inputs.tf_working_dir }}/tfplan
+            ${{ inputs.tf_working_dir }}/.temp/**/*.zip
           retention-days: 1
 
       - name: Save Plan Output
@@ -75,12 +77,12 @@ jobs:
             const path = require('path');
             const planPath = path.join(process.env.GITHUB_WORKSPACE, '${{ inputs.tf_working_dir }}', 'plan_output.txt');
             let planOutput = fs.readFileSync(planPath, 'utf8');
-            
+
             // Truncate if the plan is too long to fit in a single GitHub comment (limit is 65536 chars)
             if (planOutput.length > 60000) {
               planOutput = planOutput.substring(0, 60000) + '\n... [Plan truncated due to GitHub comment size limits]';
             }
-            
+
             const output = `#### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
             <details><summary>Show Plan for **${{ inputs.environment }}**</summary>
 

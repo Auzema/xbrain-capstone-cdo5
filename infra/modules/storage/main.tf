@@ -72,12 +72,12 @@ module "audit_bucket" {
         noncurrent_days = 30
       }
 
-      transition = [
+      transition = var.audit_retention_days > 30 ? [
         {
           days          = 30
           storage_class = "STANDARD_IA"
         }
-      ]
+      ] : []
 
       expiration = {
         days = var.audit_retention_days

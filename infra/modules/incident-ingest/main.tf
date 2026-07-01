@@ -2,58 +2,54 @@ locals {
   prefix = "${var.project}-${var.environment}"
 }
 
-module "lambda_function" {
-  source  = "terraform-aws-modules/lambda/aws"
-  version = "~> 6.0"
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_dir  = var.lambda_source_dir
+  output_path = "${path.root}/.temp/${local.prefix}-ingest-alert.zip"
+}
 
-  function_name = "${local.prefix}-ingest-alert"
-  description   = "Ingest alert lambda"
-  handler       = var.lambda_handler
-  runtime       = var.lambda_runtime
-  timeout       = 10
-  memory_size   = 256
+resource "aws_iam_role" "lambda_exec" {
+  name = "${local.prefix}-ingest-alert-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = { Service = "lambda.amazonaws.com" }
+    }]
+  })
+  tags = merge(var.tags, { Name = "${local.prefix}-ingest-alert-role" })
+}
 
-  create_package = true
-  source_path    = var.lambda_source_dir
+resource "aws_iam_role_policy_attachment" "lambda_basic" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
 
-  reserved_concurrent_executions = var.lambda_reserved_concurrency >= 0 ? var.lambda_reserved_concurrency : -1
-  kms_key_arn                    = var.enable_kms ? var.kms_key_arn : null
-
-  environment_variables = {
-    INCIDENT_QUEUE_URL         = var.incident_queue_url
-    WEBHOOK_SIGNING_SECRET_ARN = var.webhook_signing_secret_arn
-    AUDIT_BUCKET_NAME          = var.audit_bucket_name
-    ENVIRONMENT                = var.environment
-    PROJECT                    = var.project
-  }
-
-  use_existing_cloudwatch_log_group = false
-  cloudwatch_logs_retention_in_days = var.log_retention_days
-  cloudwatch_logs_kms_key_id        = var.enable_kms ? var.kms_key_arn : null
-
-  attach_policy_statements = true
-  policy_statements = {
-    SendIncidentAlert = {
-      effect    = "Allow"
-      actions   = ["sqs:SendMessage", "sqs:GetQueueAttributes", "sqs:GetQueueUrl"]
-      resources = [var.incident_queue_arn]
-    }
-    ReadWebhookSecret = {
-      effect    = "Allow"
-      actions   = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
-      resources = [var.webhook_signing_secret_arn]
-    }
-  }
-
-  create_lambda_function_url = false
-
-  tags = merge(var.tags, { Name = "${local.prefix}-ingest-alert" })
+resource "aws_iam_role_policy" "lambda_custom" {
+  name = "incident-ingest-policy"
+  role = aws_iam_role.lambda_exec.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["sqs:SendMessage", "sqs:GetQueueAttributes", "sqs:GetQueueUrl"]
+        Resource = var.incident_queue_arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
+        Resource = var.webhook_signing_secret_arn
+      }
+    ]
+  })
 }
 
 resource "aws_iam_role_policy" "kms_policy" {
   count = var.enable_kms ? 1 : 0
   name  = "kms_policy"
-  role  = module.lambda_function.lambda_role_name
+  role  = aws_iam_role.lambda_exec.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -70,6 +66,42 @@ resource "aws_iam_role_policy" "kms_policy" {
   })
 }
 
+resource "aws_cloudwatch_log_group" "lambda_logs" {
+  name              = "/aws/lambda/${local.prefix}-ingest-alert"
+  retention_in_days = var.log_retention_days
+  kms_key_id        = var.enable_kms ? var.kms_key_arn : null
+  tags              = var.tags
+}
+
+resource "aws_lambda_function" "this" {
+  function_name    = "${local.prefix}-ingest-alert"
+  description      = "Ingest alert lambda"
+  role             = aws_iam_role.lambda_exec.arn
+  handler          = var.lambda_handler
+  runtime          = var.lambda_runtime
+  timeout          = 10
+  memory_size      = 256
+
+  filename         = data.archive_file.lambda_zip.output_path
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+
+  reserved_concurrent_executions = var.lambda_reserved_concurrency >= 0 ? var.lambda_reserved_concurrency : -1
+  kms_key_arn                    = var.enable_kms ? var.kms_key_arn : null
+
+  environment {
+    variables = {
+      INCIDENT_QUEUE_URL         = var.incident_queue_url
+      WEBHOOK_SIGNING_SECRET_ARN = var.webhook_signing_secret_arn
+      AUDIT_BUCKET_NAME          = var.audit_bucket_name
+      ENVIRONMENT                = var.environment
+      PROJECT                    = var.project
+    }
+  }
+
+  depends_on = [aws_cloudwatch_log_group.lambda_logs]
+  tags       = merge(var.tags, { Name = "${local.prefix}-ingest-alert" })
+}
+
 resource "aws_apigatewayv2_api" "ingest_api" {
   name          = "${local.prefix}-ingest-api"
   protocol_type = "HTTP"
@@ -79,7 +111,7 @@ resource "aws_apigatewayv2_api" "ingest_api" {
 resource "aws_apigatewayv2_integration" "lambda_integration" {
   api_id           = aws_apigatewayv2_api.ingest_api.id
   integration_type = "AWS_PROXY"
-  integration_uri  = module.lambda_function.lambda_function_invoke_arn
+  integration_uri  = aws_lambda_function.this.invoke_arn
 }
 
 resource "aws_apigatewayv2_route" "default_route" {
@@ -98,7 +130,7 @@ resource "aws_apigatewayv2_stage" "default_stage" {
 resource "aws_lambda_permission" "apigw_invoke" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = module.lambda_function.lambda_function_name
+  function_name = aws_lambda_function.this.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.ingest_api.execution_arn}/*/*"
 }
