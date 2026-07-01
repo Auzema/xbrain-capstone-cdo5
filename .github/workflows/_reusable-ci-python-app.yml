@@ -55,10 +55,25 @@ jobs:
         run: |
           PREFIX="${{ vars.ECR_REPO_PREFIX }}"
           APP="${{ inputs.app_name }}"
-          # TODO: Add prod/staging logic when those environments are provisioned
-          echo "env_name=sandbox" >> $GITHUB_OUTPUT
-          echo "overlay_path=manifests/overlays/sandbox" >> $GITHUB_OUTPUT
-          echo "ecr_repo=${PREFIX}-sandbox-tf1-${APP}" >> $GITHUB_OUTPUT
+          EVENT_NAME="${{ github.event_name }}"
+          
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BRANCH="${{ github.base_ref }}"
+          else
+            BRANCH="${GITHUB_REF_NAME}"
+          fi
+          
+          if [[ "$BRANCH" == "main" ]]; then
+            ENV_NAME="prod"
+          elif [[ "$BRANCH" == release/* || "$BRANCH" == hotfix/* ]]; then
+            ENV_NAME="staging"
+          else
+            ENV_NAME="sandbox"
+          fi
+          
+          echo "env_name=${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "overlay_path=manifests/overlays/${ENV_NAME}" >> $GITHUB_OUTPUT
+          echo "ecr_repo=${PREFIX}-${ENV_NAME}-tf1-${APP}" >> $GITHUB_OUTPUT
 
   build-push:
     needs: [test, determine-env]
@@ -73,7 +88,8 @@ jobs:
         id: vars
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "tag=${{ needs.determine-env.outputs.env_name }}" >> $GITHUB_OUTPUT
+            PR_NUM="${{ github.event.pull_request.number }}"
+            echo "tag=pr-${PR_NUM}" >> $GITHUB_OUTPUT
           else
             SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
             echo "tag=${{ needs.determine-env.outputs.env_name }}-${SHORT_SHA}" >> $GITHUB_OUTPUT

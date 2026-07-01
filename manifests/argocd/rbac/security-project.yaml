@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: security-project
+  namespace: argocd
+spec:
+  description: "Dự án quản lý cấu hình bảo mật, RBAC, và Admission Controllers (Gatekeeper)"
+  
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+      
+  sourceRepos:
+    - '*'
+    
+  # Cấp quyền tạo ClusterResource cho Gatekeeper và các chính sách bảo mật
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
