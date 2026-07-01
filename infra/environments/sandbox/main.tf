@@ -106,8 +106,8 @@ module "iam_irsa" {
   bedrock_model_arns                   = local.bedrock_model_arns
 }
 
-module "incident_ingest" {
-  source = "../../modules/incident-ingest"
+module "ingest_lambda" {
+  source = "../../modules/ingest-lambda"
 
   name_prefix                       = local.name_prefix
   project                           = var.project
@@ -115,10 +115,14 @@ module "incident_ingest" {
   aws_region                        = var.aws_region
   account_id                        = data.aws_caller_identity.current.account_id
   partition                         = data.aws_partition.current.partition
-  incident_queue_url                = module.queue.incident_queue_url
-  incident_queue_arn                = module.queue.incident_queue_arn
+  normalized_alerts_queue_url       = module.queue.normalized_alerts_queue_url
+  normalized_alerts_queue_arn       = module.queue.normalized_alerts_queue_arn
   webhook_signing_secret_arn        = module.security.secret_arns["webhook_signing_key"]
   audit_bucket_name                 = module.storage.audit_bucket_name
+  audit_bucket_arn                  = module.storage.audit_bucket_arn
+  idempotency_table_name            = module.storage.idempotency_table_name
+  idempotency_table_arn             = module.storage.idempotency_table_arn
+  s3_prefix_pre_correlation         = "pre-correlation"
   log_group_name                    = "/aws/lambda/${local.name_prefix}-ingest-alert"
   log_retention_days                = var.log_retention_days
   source_dir                        = "${path.root}/../../lambda/ingest"
@@ -149,7 +153,7 @@ module "monitoring" {
   alarm_email                 = var.alarm_email
   dlq_alarm_threshold         = var.dlq_alarm_threshold
   queue_age_alarm_seconds     = var.queue_age_alarm_seconds
-  ingest_lambda_function_name = module.incident_ingest.function_name
+  ingest_lambda_function_name = module.ingest_lambda.function_name
   incident_queue_name         = module.queue.incident_queue_name
   incident_dlq_name           = module.queue.incident_dlq_name
   incident_state_table_name   = module.storage.incident_state_table_name

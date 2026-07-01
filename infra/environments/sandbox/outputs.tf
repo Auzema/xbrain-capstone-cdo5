@@ -56,11 +56,11 @@ output "audit_bucket_name" {
 }
 
 output "ingest_lambda_name" {
-  value = module.incident_ingest.function_name
+  value = module.ingest_lambda.function_name
 }
 
 output "ingest_lambda_function_url" {
-  value = module.incident_ingest.function_url
+  value = module.ingest_lambda.function_url
 }
 
 output "correlator_worker_role_arn" {

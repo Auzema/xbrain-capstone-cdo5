@@ -43,7 +43,7 @@ variable "az_count" {
 variable "enable_nat_gateway" {
   description = "Enable NAT Gateway for private subnet internet egress. Needed if pods call public Slack/Jira directly."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "public_alb_allowed_cidrs" {
