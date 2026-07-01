@@ -41,11 +41,11 @@ jobs:
           fi
 
           if [[ "$BRANCH" == release/* || "$BRANCH" == hotfix/* ]]; then
-            echo "env_name=sandbox" >> $GITHUB_OUTPUT
-            echo "tf_working_dir=infra/environments/sandbox" >> $GITHUB_OUTPUT
+            echo "env_name=staging" >> $GITHUB_OUTPUT
+            echo "tf_working_dir=infra/environments/staging" >> $GITHUB_OUTPUT
           elif [[ "$BRANCH" == "main" ]]; then
-            echo "env_name=sandbox" >> $GITHUB_OUTPUT
-            echo "tf_working_dir=infra/environments/sandbox" >> $GITHUB_OUTPUT
+            echo "env_name=prod" >> $GITHUB_OUTPUT
+            echo "tf_working_dir=infra/environments/prod" >> $GITHUB_OUTPUT
           else
             echo "env_name=sandbox" >> $GITHUB_OUTPUT
             echo "tf_working_dir=infra/environments/sandbox" >> $GITHUB_OUTPUT
