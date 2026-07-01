@@ -4,7 +4,7 @@ locals {
   prefix = "${var.project}-${var.environment}"
 }
 
-# 1. IAM Policy cho ESO để lấy Parameter Store
+# 1. IAM Policy cho ESO để lấy Parameter Store và ECR Authorization Token
 data "aws_iam_policy_document" "eso" {
   statement {
     actions = [
@@ -13,9 +13,16 @@ data "aws_iam_policy_document" "eso" {
       "ssm:GetParametersByPath"
     ]
     resources = [
-      "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project}/${var.environment}/*",
-      "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/${var.project}/argocd/*"
+      "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/xbrain-cdo5/${var.environment}/*",
+      "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/xbrain-cdo5/argocd/*"
     ]
+  }
+
+  statement {
+    actions = [
+      "ecr:GetAuthorizationToken"
+    ]
+    resources = ["*"]
   }
 }
 

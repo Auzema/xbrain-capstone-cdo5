@@ -125,7 +125,7 @@ module "ingest_lambda" {
   s3_prefix_pre_correlation         = "pre-correlation"
   log_group_name                    = "/aws/lambda/${local.name_prefix}-ingest-alert"
   log_retention_days                = var.log_retention_days
-  source_dir                        = "${path.root}/../../app/ingest-lambda"
+  source_dir                        = "${path.root}/../../../apps/ingest-lambda"
   enable_kms                        = var.enable_kms
   kms_key_arn                       = module.security.kms_key_arn
   enable_ingest_lambda_function_url = var.enable_ingest_lambda_function_url
@@ -175,3 +175,15 @@ module "optional_controls" {
 module "eks_addons" {
   source = "../../modules/eks-addons"
 }
+
+module "external_secrets" {
+  source = "../../modules/external-secrets"
+
+  project               = var.project
+  environment           = var.environment
+  tags                  = local.tags
+  eks_cluster_name      = module.eks.cluster_name
+  eks_oidc_provider_arn = module.eks.oidc_provider_arn
+  aws_region            = var.aws_region
+}
+
