@@ -248,7 +248,7 @@ variable "enable_ingest_lambda_function_url" {
 variable "ingest_function_url_auth_type" {
   description = "Lambda Function URL auth type: AWS_IAM or NONE."
   type        = string
-  default     = "AWS_IAM"
+  default     = "NONE"
 
   validation {
     condition     = contains(["AWS_IAM", "NONE"], var.ingest_function_url_auth_type)
