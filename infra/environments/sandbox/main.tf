@@ -125,7 +125,7 @@ module "ingest_lambda" {
   s3_prefix_pre_correlation         = "pre-correlation"
   log_group_name                    = "/aws/lambda/${local.name_prefix}-ingest-alert"
   log_retention_days                = var.log_retention_days
-  source_dir                        = "${path.root}/../../lambda/ingest"
+  source_dir                        = "${path.root}/../../../apps/ingest-lambda"
   enable_kms                        = var.enable_kms
   kms_key_arn                       = module.security.kms_key_arn
   enable_ingest_lambda_function_url = var.enable_ingest_lambda_function_url
