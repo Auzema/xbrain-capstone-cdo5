@@ -141,15 +141,19 @@ resource "aws_lambda_function" "ingest_alert" {
   kms_key_arn                    = var.enable_kms ? var.kms_key_arn : null
 
   environment {
-    variables = {
-      NORMALIZED_ALERTS_QUEUE_URL = var.normalized_alerts_queue_url
-      WEBHOOK_SIGNING_SECRET_ARN  = var.webhook_signing_secret_arn
-      AUDIT_BUCKET_NAME           = var.audit_bucket_name
-      IDEMPOTENCY_TABLE_NAME      = var.idempotency_table_name
-      S3_PREFIX_PRE_CORRELATION   = var.s3_prefix_pre_correlation
-      ENVIRONMENT                 = var.environment
-      PROJECT                     = var.project
-    }
+    variables = merge(
+      {
+        NORMALIZED_ALERTS_QUEUE_URL = var.normalized_alerts_queue_url
+        AUDIT_BUCKET_NAME           = var.audit_bucket_name
+        IDEMPOTENCY_TABLE_NAME      = var.idempotency_table_name
+        S3_PREFIX_PRE_CORRELATION   = var.s3_prefix_pre_correlation
+        ENVIRONMENT                 = var.environment
+        PROJECT                     = var.project
+      },
+      var.ingest_function_url_auth_type != "NONE" ? {
+        WEBHOOK_SIGNING_SECRET_ARN = var.webhook_signing_secret_arn
+      } : {}
+    )
   }
 
   depends_on = [
