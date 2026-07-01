@@ -6,16 +6,16 @@ services:
       context: ./platform-service
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8081:8080"
     environment:
       - LOG_LEVEL=INFO
       - ENV_NAME=local
       - AI_ENGINE_URL=http://simulator:8080
-      - SLACK_WEBHOOK_URL=http://simulator:8080/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
-      - JIRA_URL=http://simulator:8080/jira
-      - JIRA_USER=mock-user
-      - JIRA_TOKEN=mock-token
-      - JIRA_PROJECT_KEY=OPS
+      - SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+      - JIRA_URL=https://nguyenanhhoang1482004.atlassian.net
+      - JIRA_USER=dangnhatminh09032002@gmail.com
+      - JIRA_TOKEN=YOUR_JIRA_TOKEN_PLACEHOLDER
+      - JIRA_PROJECT_KEY=ALERT
       - SQS_QUEUE_URL=
     depends_on:
       - simulator

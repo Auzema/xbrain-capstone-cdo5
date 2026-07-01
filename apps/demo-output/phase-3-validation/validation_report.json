@@ -1,0 +1,12 @@
+{
+  "ingest_id": "ingest-20260701-201930-3a7da5ea",
+  "validation": {
+    "status": "VALID_WITH_WARNINGS",
+    "missing_fields": [],
+    "missing_optional_fields": [
+      "jira_project",
+      "jira_component",
+      "runbook_url"
+    ]
+  }
+}
