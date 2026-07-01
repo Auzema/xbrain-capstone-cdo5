@@ -19,9 +19,11 @@ configMapGenerator:
   name: platform-config
 
 images:
+# AI Engine: pull từ ECR cross-account của AI team (account 589077667575)
+# CDO account (458580846647) đã được cấp quyền pull cross-account
 - name: ai-engine
-  newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-ai-engine
-  newTag: sandbox-1518bd8
+  newName: 589077667575.dkr.ecr.us-east-1.amazonaws.com/tf1-ai-triage-engine
+  newTag: git-ac21f60
 - name: platform-service
   newName: 458580846647.dkr.ecr.us-east-1.amazonaws.com/xbrain-cdo5-sandbox-tf1-platform-service
   newTag: sandbox-843da53
