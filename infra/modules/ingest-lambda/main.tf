@@ -187,3 +187,13 @@ resource "aws_lambda_function_url" "ingest_alert" {
     }
   }
 }
+
+resource "aws_lambda_permission" "ingest_function_url_public" {
+  count = (var.enable_ingest_lambda_function_url && var.ingest_function_url_auth_type == "NONE") ? 1 : 0
+
+  statement_id           = "FunctionURLAllowPublicAccess"
+  action                 = "lambda:InvokeFunctionUrl"
+  function_name          = aws_lambda_function.ingest_alert.function_name
+  principal              = "*"
+  function_url_auth_type = "NONE"
+}
