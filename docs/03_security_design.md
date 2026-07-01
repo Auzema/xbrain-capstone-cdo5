@@ -102,20 +102,33 @@ Nếu dùng AWS VPC CNI, team cần xác nhận NetworkPolicy enforcement đã b
 | `tf1-deploy-role` | CI/CD/GitOps | ECR push, EKS deploy, Helm/Argo sync, Terraform apply scoped resources | Long-lived static keys, broad IAM admin |
 | `tf1-readonly-review-role` | Mentor/reviewer | Read-only EKS/CloudWatch/S3 evidence | Mutating actions |
 
-### 3.2 IRSA and Kubernetes RBAC
+### 3.2 ArgoCD & Kubernetes RBAC
 
-Pods không dùng static AWS credentials và không dựa vào node role cho app permissions. Workload nào cần gọi AWS service phải dùng IRSA/EKS Pod Identity theo service account riêng.
+Thay vì cấp quyền trực tiếp vào Kubernetes (tránh rủi ro cấp nhầm quyền `cluster-admin`), hệ thống quản lý RBAC tập trung thông qua tầng ArgoCD AppProject (`triage-hub-project.yaml`). Ba nhóm quyền chính được thiết lập:
 
-RBAC rules:
+- **Super Admin (`cdo5-super-admins`)**: Có toàn quyền hệ thống (`role:admin` tại `argocd-rbac-cm.yaml`). Quản trị core-infra và phân quyền. (Chỉ dành cho DevOps Manager/Tech Lead).
+- **Admin Tenant (`cdo5-tenant-admins`)**: Được phép thực hiện mọi thao tác (`applications, *, allow`) nhưng bị giới hạn cứng trong biên giới của tenant (`triage-hub-project`).
+- **On-call Engineer (`cdo5-oncall-engineers`)**: Áp dụng tư duy Least Privilege. Chỉ được phép xem (`get`), đồng bộ tay (`sync`) và xử lý sự cố khẩn cấp (`action/*` như restart/rollback). Tuyệt đối không được xóa hay sửa cấu hình gốc.
 
-- ưu tiên `RoleBinding` theo namespace, hạn chế `ClusterRoleBinding`;
-- không cấp `cluster-admin`, wildcard `*`, hoặc `system:masters` cho user thường ngày;
-- không cấp `get/list/watch secrets` nếu không bắt buộc;
-- hạn chế `pods/exec`, `pods/portforward`, `nodes/proxy`, `escalate`, `bind`, `impersonate`;
-- tách namespace theo trust boundary: `app`, `aiops`, `ai-engine`, `observability`;
-- break-glass admin phải có owner, expiry, MFA và audit log.
+Các rule RBAC gốc của Kubernetes (nếu có cấp trực tiếp) vẫn tuân thủ nguyên tắc: ưu tiên `RoleBinding` theo namespace, không cấp `get/list/watch secrets` nếu không bắt buộc.
 
-Pod Security baseline cho `app`, `aiops`, `ai-engine`: run as non-root, no privilege escalation, read-only root filesystem nếu app hỗ trợ, drop Linux capabilities, `seccompProfile: RuntimeDefault`. Prod nên có `ResourceQuota`, `LimitRange`, HPA/KEDA và PodDisruptionBudget.
+### 3.3 Admission Controller (Gatekeeper OPA Constraints)
+
+Để đảm bảo mọi cấu hình đưa lên Cluster đều an toàn (Security-as-Code), luồng CI/CD tích hợp `gator test` kiểm duyệt 9 tập luật bắt buộc (Constraints) từ thư mục `manifests/policies/base/constraints/`:
+
+| Constraint | Security Goal |
+|---|---|
+| **`run-as-non-root`** | Bắt buộc `securityContext.runAsNonRoot = true`. Tránh lỗi rò rỉ quyền root từ container ra node (Privilege Escalation). |
+| **`block-privileged`** | Ngăn chặn container chạy dưới cờ `--privileged`, cấm chiếm quyền điều khiển device/network gốc. |
+| **`require-container-limits`** | Bắt buộc khai báo giới hạn `cpu` và `memory`. Ngăn lỗi phình to tài nguyên (Noisy Neighbor) làm sập Cluster. |
+| **`disallow-latest-tag`** | Cấm dùng image tag `:latest`, bắt buộc tag version/SHA cố định để đảm bảo tính bất biến (immutable). |
+| **`block-loadbalancer`** | Cấm tạo Service `Type: LoadBalancer`. Ép mọi luồng traffic public phải đi qua Ingress (ALB/Nginx) để kiểm soát WAF. |
+| **`block-cross-namespace-service`** | Cấm Service trỏ lén sang Namespace khác. Đảm bảo tính cô lập network tuyệt đối giữa các Tenant. |
+| **`restrict-host-path`** | Cấm mount ổ cứng trực tiếp của máy chủ host (như `/etc`, `/var/run/docker.sock`) vào container. |
+| **`require-app-labels`** | Chuẩn hóa Labels (VD: `app.kubernetes.io/name`) phục vụ FinOps, phân loại logs và routing. |
+| **`require-app-annotations`** | Bắt buộc đính kèm Metadata (owner, commit sha) để truy vết trách nhiệm dễ dàng. |
+
+Vi phạm bất kỳ luật nào trong số này, quá trình CI lập tức đánh Failed và ngăn merge cấu hình. (Đây chính là phần thực thi "Pod Security baseline" một cách tự động).
 
 ---
 

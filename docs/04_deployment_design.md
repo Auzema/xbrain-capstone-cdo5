@@ -64,15 +64,28 @@ PR opened ──► Build ──► Test ──► Scan ──► Plan ──►
 | Build | GitHub Actions     | Compile + container build (Build once, promote everywhere) | Build success                     |
 | Test  | pytest / Jest      | Unit + integration tests, Contract schema validation       | Coverage ≥ 70%, Pass 100%         |
 | Scan  | Trivy + Gitleaks   | Image vuln + dependency CVE + secret scan                  | No CRITICAL/HIGH, 0 secrets       |
+| Policy| Kubeconform + Gator| Validate K8s syntax & OPA Gatekeeper policies (ci-manifests.yml) | 100% Policy compliant, valid YAML |
 | Plan  | Terraform plan     | Preview infra change                                       | Plan review success               |
 | Apply | ArgoCD / Terraform | Deploy K8s manifests / deploy infra                        | Healthy & Synced / Apply success  |
-| Smoke | Custom script      | K8s Job health check post-deploy / policy validation       | All endpoints 200, valid response |
+| Smoke | Custom script      | K8s Job health check post-deploy                           | All endpoints 200, valid response |
 
 ### 2.2.1 Giải thích chi tiết luồng Hierarchical CI/CD (3 Stage)
 
 Pipeline gồm **3 Stage → mỗi Stage nhiều Step → mỗi Step nhiều Job nhỏ**. Dưới đây là chi tiết từng Job: kiểm tra cái gì, dùng tool nào, lệnh/cấu hình tham khảo, điều kiện pass/fail.
 
 > **Lưu ý phạm vi**: Diagram và bảng dưới đây mô tả **Application Pipeline** (container/K8s). Luồng **Infra Pipeline** (`terraform plan/apply` PR-comment ở mục 1.3) chạy song song, trigger theo path filter `infra/**`, và không nằm trong 3 Stage này.
+
+---
+
+#### STAGE 0: MANIFEST & POLICY VALIDATION (PR CI for Configs)
+
+> Trigger: PR mở/push vào thư mục `manifests/**`. Mục tiêu: Đảm bảo "Security-as-Code" và chuẩn mực cấu hình cho mọi K8s object trước khi merge vào nhánh chính. Luồng này chạy qua `ci-manifests.yml`.
+
+| Job | Check gì | Tool / Lệnh | Pass condition |
+|---|---|---|---|
+| Kustomize Build | Hợp nhất YAML và kiểm tra tham chiếu thiếu, lỗi cú pháp | `kustomize build` | Build thành công ra file YAML tổng |
+| Kubeconform | Kiểm tra cú pháp chuẩn Kubernetes (API schema validation) | `kubeconform -ignore-missing-schemas` | Cấu trúc YAML hợp lệ 100% theo chuẩn K8s |
+| Gator Test | Đối chiếu manifest ứng dụng với luật Gatekeeper (OPA) của tổ chức | `gator test -f policies -f apps` | Không vi phạm các rule bảo mật (Ví dụ: phải có CPU/RAM limit, không chạy quyền root) |
 
 ---
 
@@ -186,10 +199,13 @@ Pipeline gồm **3 Stage → mỗi Stage nhiều Step → mỗi Step nhiều Job
 Thiết kế lý thuyết ở mục 2.2 được map trực tiếp với mã nguồn thực tế trong repo như sau:
 
 #### 1. CI/CD Workflows (GitHub Actions)
-Hệ thống sử dụng Reusable Workflows và Custom Actions để tối đa hóa tái sử dụng code (DRY).
-- **`ci-ai-engine.yml` / `ci-platform-service.yml`**: Dynamic CI pipeline. Tự động nội suy môi trường (`sandbox` hay `staging`) dựa trên nhánh Git được push. Gọi action `build-push-ecr` (Trivy + Cosign) và kết thúc bằng việc kích hoạt `cd-update-argocd.yml`.
-- **`cd-update-argocd.yml`**: Reusable workflow chịu trách nhiệm GitOps (Kustomize edit & git push `[skip ci]`).
-- **`promote-to-prod.yml`**: Workflow thủ công (Dispatch). Nhận staging tag, dùng `crane` copy sang Prod ECR, ký số `cosign`, và trigger CD cập nhật overlay Prod.
+Hệ thống sử dụng **Reusable Workflows** và **Custom Actions** để tối đa hóa tái sử dụng code (DRY) và chuẩn hóa bảo mật.
+- **`actions/aws-auth-oidc`** & **`actions/build-push-ecr`**: Đóng gói các logic phức tạp như đăng nhập OIDC không cần key tĩnh, quét Trivy, push ECR và ký điện tử Cosign.
+- **`_reusable-ci-python-app.yml`**: Khung sườn CI chuẩn mực (Lint, Typecheck, Pytest) dùng chung cho mọi dịch vụ Python.
+- **`_reusable-update-argocd.yml`**: Chịu trách nhiệm GitOps (gọi `kustomize edit set image` & git commit/push tự động để báo hiệu cho ArgoCD).
+- **`ci-platform-service.yml` / `ci-ai-engine.yml`**: Luồng CI cụ thể cho app, sẽ tự động nội suy môi trường và gọi lại các Reusable Workflows bên trên.
+- **`ci-manifests.yml`**: Chuyên trách kiểm duyệt cấu hình (`kustomize build`, `kubeconform`, `gator test`) trước khi cho phép Merge. Đảm bảo cấu hình rác/sai bảo mật không lọt vào cluster.
+- **`promote-to-prod.yml`**: Workflow thủ công (Dispatch). Thăng cấp ứng dụng bằng lệnh `crane copy` chuyển image từ kho Staging sang Prod ECR mà không tốn công build lại.
 
 #### 2. GitOps Configuration (Mục tiêu của ArgoCD)
 Đảm nhiệm phần **Deployment** trên Kubernetes, quản lý hoàn toàn bằng Kustomize.
@@ -198,8 +214,12 @@ Hệ thống sử dụng Reusable Workflows và Custom Actions để tối đa h
 - **`manifests/overlays/staging/`**: Map với **Stage 2 (STAGING)**. 
 - **`manifests/overlays/prod/`**: Map với **Stage 3 (PRODUCTION)**. Nơi chứa cấu hình Argo Rollouts (Canary Deployment 10% → 100%).
 
-#### 3. ArgoCD Application Specs
-- **`manifests/argocd/`**: Chứa các khai báo `Application` hoặc `ApplicationSet` của ArgoCD để trỏ về các thư mục `overlays/` ở trên và đồng bộ (sync) vào Kubernetes Cluster.
+#### 3. ArgoCD Application Specs (App of Apps)
+- **`manifests/argocd/apps/appset.yaml`**: Chứa toàn bộ logic khởi tạo hàng loạt Ứng dụng động thông qua cơ chế ApplicationSet, loại bỏ việc khai báo ứng dụng thủ công:
+  - **`xbrain-appset`**: Quét thư mục `overlays/` để tự động tạo ra các môi trường Sandbox, Staging, Prod. Bật Auto-sync cho Non-prod và tắt cho Prod.
+  - **`xbrain-pr-appset`**: Bắt sự kiện tạo Pull Request trên Github để khởi tạo **môi trường Test động** hoàn toàn độc lập (ví dụ `xbrain-cdo5-pr-12`). Môi trường này sẽ tự hủy khi PR đóng.
+  - **`monitoring-set` & `core-infra-set`**: Tự động lấy Helm Chart chuẩn từ Internet (Kube-Prometheus-Stack, Nginx Ingress) trộn với file `values.yaml` nội bộ và triển khai trước nhất (Sync wave 1).
+  - **`gatekeeper-policies-set`**: Phân phối đồng bộ tập luật bảo mật (OPA) xuống toàn bộ các namespace hệ thống.
 
 ## 3. GitOps
 
