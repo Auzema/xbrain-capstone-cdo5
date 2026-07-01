@@ -2,29 +2,7 @@
 
 ## 1. Architecture diagram
 
-```text
-User / Load Generator
-        │
-        ▼
-Application Load Balancer
-        │
-        ▼
-Demo App Workloads on EKS
-        │
-        ├── metrics
-        │      ▼
-        │   Prometheus
-        │      ▼
-        │   PrometheusRule
-        │
-        ├── logs
-        │      ▼
-        │   Loki
-        │
-        └── dashboards
-               ▼
-            Grafana
-```
+![Infrastructure Architecture Diagram](assets/infra-architecture-diagram.png)
 
 ## 1.1 Main incident flow
 
