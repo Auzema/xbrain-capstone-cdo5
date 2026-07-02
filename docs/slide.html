@@ -488,21 +488,47 @@
     <div class="slide">
       <div class="slide-content">
         <h2><i class="fa-solid fa-gauge-high"></i> 3. Chỉ Tiêu Phi Chức Năng & Mục Tiêu SLO</h2>
+        
+        <!-- 4 Metric Cards Dashboard -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.8rem; margin-bottom: 0.8rem; margin-top: 0.4rem;">
+          <div class="card" style="text-align: center; padding: 0.7rem; border-top: 3px solid var(--green-color); background-color: rgba(15, 23, 42, 0.45);">
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--green-color); margin-bottom: 0.1rem;">&ge;99.95%</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">SLA Availability</div>
+            <div style="font-size: 0.75rem; color: #cbd5e1; margin-top: 0.2rem;">EKS Control Plane</div>
+          </div>
+          <div class="card" style="text-align: center; padding: 0.7rem; border-top: 3px solid var(--accent-light); background-color: rgba(15, 23, 42, 0.45);">
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-light); margin-bottom: 0.1rem;">&lt;1000ms</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">SLO P99 Latency</div>
+            <div style="font-size: 0.75rem; color: #cbd5e1; margin-top: 0.2rem;">ALB + Ingress routing</div>
+          </div>
+          <div class="card" style="text-align: center; padding: 0.7rem; border-top: 3px solid var(--yellow-color); background-color: rgba(15, 23, 42, 0.45);">
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--yellow-color); margin-bottom: 0.1rem;">&lt;30 Giây</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">E2E Triage Time</div>
+            <div style="font-size: 0.75rem; color: #cbd5e1; margin-top: 0.2rem;">Alert to Jira Ticket</div>
+          </div>
+          <div class="card" style="text-align: center; padding: 0.7rem; border-top: 3px solid #e11d48; background-color: rgba(15, 23, 42, 0.45);">
+            <div style="font-size: 1.5rem; font-weight: 700; color: #e11d48; margin-bottom: 0.1rem;">&lt;30 Phút</div>
+            <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Onboarding Time</div>
+            <div style="font-size: 0.75rem; color: #cbd5e1; margin-top: 0.2rem;">New Tenant via IaC</div>
+          </div>
+        </div>
+
+        <!-- 2 Detailed Column Cards -->
         <div class="grid-2">
-          <div class="card">
-            <h3><i class="fa-solid fa-chart-line green"></i> Chỉ tiêu Hiệu Năng & Độ Tin Cậy</h3>
-            <ul>
-              <li class="no-bullet"><i class="fa-solid fa-stopwatch li-icon green"></i> <span class="highlight">SLO P99 Latency (Routing):</span> Cấu hình hạ tầng điều hướng (ALB + Ingress Controller) có thời gian trễ dưới <span class="green">&lt; 1000ms</span>.</li>
-              <li class="no-bullet"><i class="fa-solid fa-bolt li-icon green"></i> <span class="highlight">E2E Alert ➔ Jira Ticket:</span> Tổng thời gian từ khi Alert kích hoạt đến lúc xuất hiện Ticket Jira đầy đủ RCA phải dưới <span class="green">&lt; 30 giây</span>.</li>
-              <li class="no-bullet"><i class="fa-solid fa-heartbeat li-icon green"></i> <span class="highlight">SLA Availability:</span> Cam kết EKS Control Plane đạt độ sẵn sàng <span class="green">&ge; 99.95%</span>. Nền tảng on-call hoạt động bền bỉ.</li>
+          <div class="card" style="padding: 0.8rem 1.1rem;">
+            <h3 class="highlight" style="font-size: 1rem;"><i class="fa-solid fa-chart-line"></i> Chỉ tiêu Hiệu Năng & Độ Tin Cậy</h3>
+            <ul style="margin-top: 0.4rem; padding-left: 1.4rem;">
+              <li class="no-bullet" style="margin-bottom: 0.35rem; font-size: 0.85rem;"><i class="fa-solid fa-stopwatch li-icon green"></i> <strong>P99 Latency:</strong> Tối ưu hóa Ingress routing, đảm bảo phản hồi webhook tức thì.</li>
+              <li class="no-bullet" style="margin-bottom: 0.35rem; font-size: 0.85rem;"><i class="fa-solid fa-bolt li-icon green"></i> <strong>RCA & Triage:</strong> Tự động chẩn đoán và đóng gói log, trace đính kèm Jira ticket.</li>
+              <li class="no-bullet" style="font-size: 0.85rem;"><i class="fa-solid fa-heartbeat li-icon green"></i> <strong>Availability SLA:</strong> Đảm bảo hệ thống giám sát và on-call không bị gián đoạn.</li>
             </ul>
           </div>
-          <div class="card">
-            <h3><i class="fa-solid fa-lock-open yellow"></i> Chỉ tiêu Bảo Mật & Co Giãn (NFRs)</h3>
-            <ul>
-              <li class="no-bullet"><i class="fa-solid fa-user-shield li-icon highlight"></i> <span class="highlight">Tenant Data Isolation:</span> Cách ly dữ liệu chéo <span class="green">100%</span>. Mọi đường dẫn dữ liệu (SQS, DB, S3, Loki) bắt buộc kiểm soát bằng `tenant_id`.</li>
-              <li class="no-bullet"><i class="fa-solid fa-wand-magic-sparkles li-icon highlight"></i> <span class="highlight">Tự động Onboarding:</span> Rút ngắn thời gian khởi tạo môi trường cho tenant mới xuống dưới <span class="green">&lt; 30 phút</span> qua IaC tự động.</li>
-              <li class="no-bullet"><i class="fa-solid fa-expand-arrows-alt li-icon highlight"></i> <span class="highlight">Xử lý quá tải (Burst Handling):</span> HPA cấu hình tối thiểu <span class="highlight">2 pods</span>, co giãn tối đa <span class="highlight">10 pods</span> trên Prod, kích hoạt ngay khi CPU chạm ngưỡng <span class="highlight">75%</span>.</li>
+          <div class="card" style="padding: 0.8rem 1.1rem;">
+            <h3 class="yellow" style="font-size: 1rem;"><i class="fa-solid fa-lock"></i> Chỉ tiêu Bảo Mật & Co Giãn (NFRs)</h3>
+            <ul style="margin-top: 0.4rem; padding-left: 1.4rem;">
+              <li class="no-bullet" style="margin-bottom: 0.35rem; font-size: 0.85rem;"><i class="fa-solid fa-user-shield li-icon highlight"></i> <strong>Tenant Data Isolation:</strong> Cách ly chéo 100% tài nguyên ở tầng ứng dụng và lưu trữ.</li>
+              <li class="no-bullet" style="margin-bottom: 0.35rem; font-size: 0.85rem;"><i class="fa-solid fa-wand-magic-sparkles li-icon highlight"></i> <strong>Tự động hóa IaC:</strong> Setup VPC endpoints, namespaces và giám sát qua Terraform.</li>
+              <li class="no-bullet" style="font-size: 0.85rem;"><i class="fa-solid fa-expand-arrows-alt li-icon highlight"></i> <strong>HPA Config on Prod:</strong> CPU target 75%, co giãn linh hoạt từ 2 đến 10 Pods.</li>
             </ul>
           </div>
         </div>
