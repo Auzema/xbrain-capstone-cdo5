@@ -164,7 +164,7 @@ variable "node_disk_size" {
 variable "admin_principal_arn" {
   description = "Optional IAM principal ARN granted EKS admin access through access entry."
   type        = string
-  default     = ""
+  default     = "arn:aws:iam::458580846647:user/ThanhDat"
 }
 
 variable "enable_ebs_csi_addon" {

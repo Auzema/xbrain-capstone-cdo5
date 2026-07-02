@@ -13,6 +13,9 @@ spec:
       server: https://kubernetes.default.svc
     - namespace: 'core-infra-*'
       server: https://kubernetes.default.svc
+    - namespace: 'kube-system'
+      server: https://kubernetes.default.svc
+
 
   sourceRepos:
     - 'https://github.com/Auzema/xbrain-capstone-cdo5.git'

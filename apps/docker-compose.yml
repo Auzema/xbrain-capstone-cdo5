@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  platform-service:
+    build:
+      context: ./platform-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      - LOG_LEVEL=INFO
+      - ENV_NAME=local
+      - AI_ENGINE_URL=http://simulator:8080
+      - SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+      - JIRA_URL=https://nguyenanhhoang1482004.atlassian.net
+      - JIRA_USER=dangnhatminh09032002@gmail.com
+      - JIRA_TOKEN=YOUR_JIRA_TOKEN_PLACEHOLDER
+      - JIRA_PROJECT_KEY=ALERT
+      - SQS_QUEUE_URL=
+    depends_on:
+      - simulator
+
+  simulator:
+    build:
+      context: ./simulator
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8080"
+    environment:
+      - PLATFORM_SERVICE_URL=http://platform-service:8080/api/v1/notify

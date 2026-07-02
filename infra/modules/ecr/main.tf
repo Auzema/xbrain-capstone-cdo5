@@ -1,6 +1,6 @@
 resource "aws_ecr_repository" "repos" {
   for_each = toset([
-    "demo-app",
+    "platform-service",
     "correlator-worker",
     "ai-engine",
     "observability-tools",

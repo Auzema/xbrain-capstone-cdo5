@@ -1,0 +1,14 @@
+{
+  "event": {
+    "headers": {
+      "x-tf1-signature": "f94639a188e68e441c0f2d001de0edfb1216b22991d2772502ed6d863441baee",
+      "x-tf1-timestamp": "1782937170",
+      "x-tenant-id": "tenant-a"
+    },
+    "body": "{\"receiver\": \"webhook-receiver\", \"status\": \"firing\", \"alerts\": [{\"status\": \"firing\", \"labels\": {\"tenant_id\": \"tenant-a\", \"environment\": \"prod\", \"region\": \"us-east-1\", \"cluster\": \"eks-prod\", \"namespace\": \"bookhub-prod\", \"pod\": \"book-service-7d9f6c8d9f-abcd1\", \"deployment\": \"book-service\", \"container\": \"book-service\", \"metric_names\": [\"db_connection_pool_active\", \"db_connection_pool_wait_count\", \"db_connection_wait_time_ms\"], \"trace_id\": \"trace-dbpool-002\", \"status_code\": \"500\", \"reason\": \"db_pool_exhaustion\", \"alertname\": \"alert-book-service-db-pool-001\", \"service\": \"book-service\", \"severity\": \"critical\"}, \"annotations\": {\"summary\": \"Database Connection Pool Exhaustion on book-service\", \"description\": \"book-service database connection pool is c\\u1ea1n ki\\u1ec7t, active connections at max capacity\"}, \"startsAt\": \"2026-06-29T10:00:00Z\"}]}",
+    "isBase64Encoded": false
+  },
+  "verification_status": "SIGNATURE_VALID",
+  "timestamp_unix": "1782937170",
+  "signing_secret_arn": "arn:aws:secretsmanager:us-east-1:458580846647:secret:webhook_signing_key"
+}

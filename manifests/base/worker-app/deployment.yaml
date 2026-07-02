@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-app
+  labels:
+    app: worker-app
+    app.kubernetes.io/name: worker-app
+    app.kubernetes.io/part-of: xbrain-cdo5
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker-app
+  template:
+    metadata:
+      labels:
+        app: worker-app
+      annotations:
+        team: platform
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      serviceAccountName: correlator-worker
+      containers:
+        - name: worker-app
+          image: correlator-worker:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false  # The python code writes artifacts to local temp files before uploading to S3
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+          envFrom:
+            - configMapRef:
+                name: platform-config
+            - secretRef:
+                name: platform-secrets-synced
