@@ -12,5 +12,5 @@ alertmanager:
       - name: 'null'
       - name: 'platform-service-webhook'
         webhook_configs:
-          - url: "https://36f45b74ued4adw2fllrhqopxy0wyoma.lambda-url.us-east-1.on.aws/"
+          - url: "http://simulator.xbrain-cdo5-sandbox.svc.cluster.local/dumbproxy/alertmanager-webhook"
             send_resolved: true
