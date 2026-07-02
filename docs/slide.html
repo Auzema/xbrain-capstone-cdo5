@@ -9,6 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
   <style>
     :root {
       --bg-color: #0b0f19;
@@ -114,11 +117,23 @@
       box-shadow: 0 0 10px var(--accent-light);
     }
 
+    h2 i {
+      margin-right: 0.8rem;
+      color: var(--accent-light);
+    }
+
     h3 {
       font-size: 1.25rem;
       font-weight: 600;
       color: #bae6fd;
       margin-bottom: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    h3 i {
+      font-size: 1.15rem;
     }
 
     p {
@@ -136,16 +151,23 @@
       line-height: 1.6;
       margin-bottom: 0.5rem;
       position: relative;
-      padding-left: 1.5rem;
+      padding-left: 1.8rem;
       color: #e2e8f0;
     }
 
-    li::before {
-      content: "✦";
+    /* Custom list icons using FontAwesome classes directly in markup */
+    li.no-bullet::before {
+      display: none;
+    }
+
+    li i.li-icon {
       position: absolute;
       left: 0;
+      top: 0.25rem;
       color: var(--accent-light);
-      font-weight: bold;
+      font-size: 0.95rem;
+      width: 1.4rem;
+      text-align: center;
     }
 
     /* Highlight elements */
@@ -193,6 +215,30 @@
       border-color: var(--accent-light);
       box-shadow: 0 10px 35px rgba(14, 165, 233, 0.15);
       transform: translateY(-2px);
+    }
+
+    /* Embedded Diagram styling */
+    .embedded-diagram {
+      max-height: 68vh;
+      width: auto;
+      max-width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
+      margin: 0.2rem auto;
+      display: block;
+      border: 1px solid var(--card-border);
+      background-color: rgba(15, 23, 42, 0.4);
+      padding: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .embedded-diagram:hover {
+      border-color: var(--accent-light);
+      transform: scale(1.01);
+    }
+
+    .zoomable {
+      cursor: zoom-in;
     }
 
     /* Tables */
@@ -254,6 +300,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 0.4rem;
     }
 
     .btn:hover {
@@ -290,67 +337,6 @@
       font-weight: 500;
       z-index: 100;
       letter-spacing: 0.05em;
-    }
-
-    /* Diagram Elements */
-    .flowchart {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.35rem;
-      width: 100%;
-      margin: 0.3rem 0;
-    }
-
-    .flow-row {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 100%;
-      gap: 1.2rem;
-    }
-
-    .node {
-      background-color: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      padding: 0.45rem 0.8rem;
-      font-size: 0.8rem;
-      text-align: center;
-      min-width: 170px;
-      font-weight: 500;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-      color: #e2e8f0;
-    }
-
-    .node.active {
-      border: 1.5px solid var(--accent-light);
-      background-color: rgba(14, 165, 233, 0.08);
-      box-shadow: 0 0 12px rgba(14, 165, 233, 0.15);
-    }
-
-    .node.db-s3 {
-      border: 1.5px solid var(--green-color);
-      background-color: rgba(16, 185, 129, 0.06);
-    }
-
-    .node.alert {
-      border: 1.5px solid var(--red-color);
-      background-color: rgba(244, 63, 94, 0.06);
-    }
-
-    .arrow-v {
-      color: var(--accent-light);
-      font-size: 1rem;
-      line-height: 1;
-      height: 10px;
-      font-weight: bold;
-    }
-
-    .arrow-h {
-      color: var(--accent-light);
-      font-size: 1.1rem;
-      font-weight: bold;
     }
 
     /* Title Slide Specifics */
@@ -411,67 +397,6 @@
       color: #e2e8f0;
       font-weight: 600;
     }
-
-    /* CI/CD vertical pipeline flow */
-    .pipeline-container {
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-      width: 100%;
-      margin-top: 0.2rem;
-    }
-
-    .pipeline-stage {
-      display: grid;
-      grid-template-columns: 160px 1fr;
-      align-items: center;
-      border: 1px solid var(--card-border);
-      border-radius: 8px;
-      background-color: var(--card-bg);
-      overflow: hidden;
-      min-height: 55px;
-    }
-
-    .stage-title {
-      font-weight: 700;
-      padding: 0.8rem;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-transform: uppercase;
-      font-size: 0.75rem;
-      text-align: center;
-    }
-
-    .stage-0 { background-color: #334155; color: #f8fafc; }
-    .stage-1 { background-color: #1e3a8a; color: #bae6fd; }
-    .stage-2 { background-color: #064e3b; color: #a7f3d0; }
-    .stage-3 { background-color: #7f1d1d; color: #fecaca; }
-
-    .stage-steps {
-      display: flex;
-      padding: 0.6rem 1.2rem;
-      gap: 2rem;
-      flex-wrap: wrap;
-    }
-
-    .step-item {
-      display: flex;
-      flex-direction: column;
-      font-size: 0.8rem;
-    }
-
-    .step-name {
-      font-weight: 600;
-      color: var(--accent-light);
-    }
-
-    .step-desc {
-      color: #64748b;
-      font-size: 0.7rem;
-      margin-top: 0.1rem;
-    }
   </style>
 </head>
 <body>
@@ -482,7 +407,7 @@
     <div class="slide active">
       <div class="slide-content title-slide">
         <div class="title-logo-wrapper">
-          <span class="title-logo">CDO-05 TASK FORCE 1</span>
+          <span class="title-logo"><i class="fa-solid fa-cubes"></i> CDO-05 TASK FORCE 1</span>
         </div>
         <h1>GIẢI PHÁP TRIAGE HUB AIOPS</h1>
         <h3>Nền Tảng Hỗ Trợ Vận Hành & Tự Động Hóa Chẩn Đoán Sự Cố</h3>
@@ -496,23 +421,23 @@
     <!-- SLIDE 2: Context -->
     <div class="slide">
       <div class="slide-content">
-        <h2>1. Bối Cảnh Dự Án (Project Context)</h2>
+        <h2><i class="fa-solid fa-circle-info"></i> 1. Bối Cảnh Dự Án (Project Context)</h2>
         <div class="grid-2">
           <div class="card">
-            <h3>Quy mô & Mô hình hoạt động</h3>
+            <h3><i class="fa-solid fa-server highlight"></i> Quy mô & Mô hình hoạt động</h3>
             <ul>
-              <li>Hệ thống <span class="highlight">B2B SaaS</span> phục vụ khoảng <span class="highlight">~20,000 người dùng</span> hoạt động đồng thời.</li>
-              <li>Kiến trúc phân rã phức tạp gồm <span class="highlight">~50 microservices</span> liên kết.</li>
-              <li>Đội ngũ kỹ sư trực vận hành on-call cực kỳ mỏng: Chỉ có <span class="highlight">8 engineers</span> hỗ trợ toàn bộ hệ thống.</li>
+              <li class="no-bullet"><i class="fa-solid fa-cloud-arrow-up li-icon"></i> Hệ thống <span class="highlight">B2B SaaS</span> phục vụ khoảng <span class="highlight">~20,000 người dùng</span> hoạt động đồng thời.</li>
+              <li class="no-bullet"><i class="fa-solid fa-network-wired li-icon"></i> Kiến trúc phân rã phức tạp gồm <span class="highlight">~50 microservices</span> liên kết.</li>
+              <li class="no-bullet"><i class="fa-solid fa-users-gear li-icon"></i> Đội ngũ kỹ sư trực vận hành on-call cực kỳ mỏng: Chỉ có <span class="highlight">8 engineers</span> hỗ trợ toàn bộ hệ thống.</li>
             </ul>
           </div>
           <div class="card">
-            <h3>Thực trạng & Vấn đề nghiêm trọng</h3>
+            <h3><i class="fa-solid fa-triangle-exclamation red"></i> Thực trạng & Vấn đề nghiêm trọng</h3>
             <ul>
-              <li>Nhận lượng cảnh báo khổng lồ: Trên <span class="accent red">50 alerts/tuần</span>.</li>
-              <li>Quy trình điều tra hoàn toàn thủ công: Tra cứu logs, query metrics, viết ticket Jira, ping Slack tìm owner.</li>
-              <li><span class="red">MTTR tăng cao:</span> Tốn trung bình <span class="red">30-60 phút</span> để tìm ra nguyên nhân gốc rễ cho mỗi alert.</li>
-              <li>Không đo lường được: CTO không có số liệu thực tế để báo cáo hiệu quả vận hành cho Ban giám đốc mỗi quý.</li>
+              <li class="no-bullet"><i class="fa-solid fa-bell li-icon red"></i> Nhận lượng cảnh báo khổng lồ: Trên <span class="accent red">50 alerts/tuần</span>.</li>
+              <li class="no-bullet"><i class="fa-solid fa-hand-pointer li-icon yellow"></i> Quy trình điều tra hoàn toàn thủ công: Tra cứu logs, query metrics, viết ticket Jira, ping Slack tìm owner.</li>
+              <li class="no-bullet"><i class="fa-solid fa-hourglass-half li-icon red"></i> <span class="red">MTTR tăng cao:</span> Tốn trung bình <span class="red">30-60 phút</span> để tìm ra nguyên nhân gốc rễ cho mỗi alert.</li>
+              <li class="no-bullet"><i class="fa-solid fa-chart-pie li-icon"></i> Không đo lường được: CTO không có số liệu thực tế để báo cáo hiệu quả vận hành cho Ban giám đốc mỗi quý.</li>
             </ul>
           </div>
         </div>
@@ -522,26 +447,26 @@
     <!-- SLIDE 3: Pain Points -->
     <div class="slide">
       <div class="slide-content">
-        <h2>2. Nỗi Đau & Vấn Đề Của Khách Hàng (Customer Pain Points)</h2>
+        <h2><i class="fa-solid fa-circle-exclamation red"></i> 2. Nỗi Đau & Vấn Đề Của Khách Hàng (Customer Pain Points)</h2>
         <div class="grid-3">
           <div class="card">
-            <h3 class="red">Quá Tải Cảnh Báo</h3>
+            <h3 class="red"><i class="fa-solid fa-volume-high"></i> Quá Tải Cảnh Báo</h3>
             <p style="margin-bottom: 0.5rem;"><strong>Alert Fatigue & Storms:</strong></p>
             <p>Khi một dịch vụ cốt lõi bị sập, hệ thống sinh ra hàng tá alert triệu chứng cascading. Đội on-call bị ngập trong thông tin nhiễu, dẫn đến bỏ lỡ cảnh báo critical thực sự.</p>
           </div>
           <div class="card">
-            <h3 class="red">Rò Rỉ Dữ Liệu Chéo</h3>
+            <h3 class="red"><i class="fa-solid fa-shield-halved"></i> Rò Rỉ Dữ Liệu Chéo</h3>
             <p style="margin-bottom: 0.5rem;"><strong>Cross-Tenant Leakage:</strong></p>
             <p>Nguy cơ cực lớn khi AI Engine trong lúc chẩn đoán RCA tự động truy cập logs/metrics của tenant này nhưng lại vô tình đọc được dữ liệu nhạy cảm của tenant khác.</p>
           </div>
           <div class="card">
-            <h3 class="red">Onboarding Thủ Công</h3>
+            <h3 class="red"><i class="fa-solid fa-user-plus"></i> Onboarding Thủ Công</h3>
             <p style="margin-bottom: 0.5rem;"><strong>SLA chậm trễ:</strong></p>
             <p>Việc thiết lập môi trường cô lập, các endpoint giám sát và phân quyền bảo mật cho một khách thuê (tenant) mới tốn nhiều ngày cấu hình thủ công bằng tay.</p>
           </div>
         </div>
         <div class="card" style="margin-top: 1rem; padding: 1rem 1.5rem;">
-          <h3>Độ tin cậy kém của luồng sự cố</h3>
+          <h3><i class="fa-solid fa-share-nodes"></i> Độ tin cậy kém của luồng sự cố</h3>
           <p>Các cảnh báo thô gửi đi theo cơ chế <em>fire-and-forget</em> trực tiếp tới Slack/Jira mà không qua hàng đợi trung gian dễ bị thất lạc khi mạng lỗi hoặc API đầu xa bị rate-limit.</p>
         </div>
       </div>
@@ -550,22 +475,22 @@
     <!-- SLIDE 4: SLO & NFR Targets -->
     <div class="slide">
       <div class="slide-content">
-        <h2>3. Chỉ Tiêu Phi Chức Năng & Mục Tiêu SLO</h2>
+        <h2><i class="fa-solid fa-gauge-high"></i> 3. Chỉ Tiêu Phi Chức Năng & Mục Tiêu SLO</h2>
         <div class="grid-2">
           <div class="card">
-            <h3>Chỉ tiêu Hiệu Năng & Độ Tin Cậy</h3>
+            <h3><i class="fa-solid fa-chart-line green"></i> Chỉ tiêu Hiệu Năng & Độ Tin Cậy</h3>
             <ul>
-              <li><span class="highlight">SLO P99 Latency (Routing):</span> Cấu hình hạ tầng điều hướng (ALB + Ingress Controller) có thời gian trễ dưới <span class="green">&lt; 1000ms</span> (không tính thời gian AI inference).</li>
-              <li><span class="highlight">E2E Alert ➔ Jira Ticket:</span> Tổng thời gian từ khi Alert kích hoạt đến lúc xuất hiện Ticket Jira đầy đủ RCA phải dưới <span class="green">&lt; 30 giây</span>.</li>
-              <li><span class="highlight">SLA Availability:</span> Cam kết EKS Control Plane đạt độ sẵn sàng <span class="green">&ge; 99.95%</span>. Nền tảng on-call không được dừng lặng lẽ.</li>
+              <li class="no-bullet"><i class="fa-solid fa-stopwatch li-icon green"></i> <span class="highlight">SLO P99 Latency (Routing):</span> Cấu hình hạ tầng điều hướng (ALB + Ingress Controller) có thời gian trễ dưới <span class="green">&lt; 1000ms</span>.</li>
+              <li class="no-bullet"><i class="fa-solid fa-bolt li-icon green"></i> <span class="highlight">E2E Alert ➔ Jira Ticket:</span> Tổng thời gian từ khi Alert kích hoạt đến lúc xuất hiện Ticket Jira đầy đủ RCA phải dưới <span class="green">&lt; 30 giây</span>.</li>
+              <li class="no-bullet"><i class="fa-solid fa-heartbeat li-icon green"></i> <span class="highlight">SLA Availability:</span> Cam kết EKS Control Plane đạt độ sẵn sàng <span class="green">&ge; 99.95%</span>. Nền tảng on-call hoạt động bền bỉ.</li>
             </ul>
           </div>
           <div class="card">
-            <h3>Chỉ tiêu Bảo Mật & Co Giãn (NFRs)</h3>
+            <h3><i class="fa-solid fa-lock-open yellow"></i> Chỉ tiêu Bảo Mật & Co Giãn (NFRs)</h3>
             <ul>
-              <li><span class="highlight">Tenant Data Isolation:</span> Cách ly dữ liệu chéo <span class="green">100%</span>. Mọi đường dẫn dữ liệu (SQS, DB, S3, Loki) bắt buộc kiểm soát bằng `tenant_id`.</li>
-              <li><span class="highlight">Tự động Onboarding:</span> Rút ngắn thời gian khởi tạo môi trường cho tenant mới xuống dưới <span class="green">&lt; 30 phút</span> qua IaC tự động.</li>
-              <li><span class="highlight">Xử lý quá tải (Burst Handling):</span> HPA cấu hình tối thiểu <span class="highlight">2 pods</span>, co giãn tối đa <span class="highlight">10 pods</span> trên Prod, kích hoạt ngay khi CPU chạm ngưỡng <span class="highlight">75%</span>.</li>
+              <li class="no-bullet"><i class="fa-solid fa-user-shield li-icon highlight"></i> <span class="highlight">Tenant Data Isolation:</span> Cách ly dữ liệu chéo <span class="green">100%</span>. Mọi đường dẫn dữ liệu (SQS, DB, S3, Loki) bắt buộc kiểm soát bằng `tenant_id`.</li>
+              <li class="no-bullet"><i class="fa-solid fa-wand-magic-sparkles li-icon highlight"></i> <span class="highlight">Tự động Onboarding:</span> Rút ngắn thời gian khởi tạo môi trường cho tenant mới xuống dưới <span class="green">&lt; 30 phút</span> qua IaC tự động.</li>
+              <li class="no-bullet"><i class="fa-solid fa-expand-arrows-alt li-icon highlight"></i> <span class="highlight">Xử lý quá tải (Burst Handling):</span> HPA cấu hình tối thiểu <span class="highlight">2 pods</span>, co giãn tối đa <span class="highlight">10 pods</span> trên Prod, kích hoạt ngay khi CPU chạm ngưỡng <span class="highlight">75%</span>.</li>
             </ul>
           </div>
         </div>
@@ -575,23 +500,23 @@
     <!-- SLIDE 5: WHY EKS -->
     <div class="slide">
       <div class="slide-content">
-        <h2>4. Kiến Trúc Giải Pháp: EKS-Native AIOps Platform</h2>
+        <h2><i class="fa-brands fa-kubernetes"></i> 4. Kiến Trúc Giải Pháp: EKS-Native AIOps Platform</h2>
         <div class="grid-2">
           <div class="card">
-            <h3>Tại sao chọn EKS thay vì Serverless thuần túy?</h3>
+            <h3><i class="fa-solid fa-lightbulb highlight"></i> Tại sao chọn EKS thay vì Serverless?</h3>
             <p style="margin-bottom: 0.6rem;">EKS không chỉ đóng vai trò container hosting, mà nó cung cấp một <strong>mô hình Metadata nhất quán (Consistent Workload Model)</strong> cho toàn bộ hệ thống AIOps:</p>
             <ul>
-              <li><span class="highlight">Namespace:</span> Phân tách vật lý ranh giới tenant/env.</li>
-              <li><span class="highlight">K8s Labels & Annotations:</span> Lưu giữ các nhãn `tenant_id`, `service`, `env`, `version` trực tiếp trong workload.</li>
-              <li><span class="highlight">Telemetry Context:</span> Khi logs/metrics được thu thập bởi Prometheus/Loki, các nhãn K8s này được đính kèm tự động. AI Engine chỉ được phép truy vấn trong phạm vi nhãn của tenant bị lỗi.</li>
+              <li class="no-bullet"><i class="fa-solid fa-folder-closed li-icon"></i> <span class="highlight">Namespace:</span> Phân tách vật lý ranh giới tenant/env.</li>
+              <li class="no-bullet"><i class="fa-solid fa-tags li-icon"></i> <span class="highlight">K8s Labels & Annotations:</span> Lưu giữ các nhãn `tenant_id`, `service`, `env`, `version` trực tiếp trong workload.</li>
+              <li class="no-bullet"><i class="fa-solid fa-compress-arrows-alt li-icon"></i> <span class="highlight">Telemetry Context:</span> Khi logs/metrics được thu thập bởi Prometheus/Loki, các nhãn K8s này được đính kèm tự động. AI Engine chỉ query trong phạm vi nhãn của tenant bị lỗi.</li>
             </ul>
           </div>
           <div class="card">
-            <h3>Sức mạnh từ Hệ sinh thái Cloud-Native</h3>
+            <h3><i class="fa-solid fa-cubes-stacked"></i> Sức mạnh từ Hệ sinh thái Cloud-Native</h3>
             <ul>
-              <li><span class="highlight">GitOps Controller (ArgoCD):</span> Kiểm soát sai lệch cấu hình (drift detection) và tự động đồng bộ hóa.</li>
-              <li><span class="highlight">Bảo mật cấp Pod (IRSA / Pod Identity):</span> Cấp quyền IAM chi tiết, tối giản đến từng Pod, không lưu key tĩnh.</li>
-              <li><span class="highlight">In-cluster Observability:</span> Vận hành Prometheus Operator và Loki trực tiếp trong cụm, giảm hóa đơn CloudWatch đắt đỏ.</li>
+              <li class="no-bullet"><i class="fa-solid fa-arrows-spin li-icon"></i> <span class="highlight">GitOps Controller (ArgoCD):</span> Kiểm soát sai lệch cấu hình (drift detection) và tự động đồng bộ hóa.</li>
+              <li class="no-bullet"><i class="fa-solid fa-key li-icon"></i> <span class="highlight">Bảo mật cấp Pod (IRSA / Pod Identity):</span> Cấp quyền IAM chi tiết, tối giản đến từng Pod, không lưu key tĩnh.</li>
+              <li class="no-bullet"><i class="fa-solid fa-chart-bar li-icon"></i> <span class="highlight">In-cluster Observability:</span> Vận hành Prometheus Operator và Loki trực tiếp trong cụm, giảm hóa đơn CloudWatch đắt đỏ.</li>
             </ul>
           </div>
         </div>
@@ -601,39 +526,13 @@
     <!-- SLIDE 6: Infrastructure Diagram -->
     <div class="slide">
       <div class="slide-content">
-        <h2>5. Sơ Đồ Kiến Trúc Hạ Tầng (Infrastructure Diagram)</h2>
-        
-        <div class="flowchart" style="margin-top: 0.5rem;">
-          <div class="flow-row">
-            <div class="node alert">Prometheus Rule (EKS)</div>
-            <div class="arrow-h">➔</div>
-            <div class="node active">Alertmanager (EKS)</div>
-            <div class="arrow-h">➔</div>
-            <div class="node">Ingest Lambda (AWS)</div>
-          </div>
-          <div class="arrow-v">▼</div>
-          <div class="flow-row">
-            <div class="node db-s3" style="min-width: 140px;">DynamoDB (State)</div>
-            <div class="arrow-h">◀-▶</div>
-            <div class="node active" style="min-width: 280px; background-color: #0d1527; border-style: solid;">
-              CDO Incident Correlator Worker
-              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem;">Polling SQS & Gating AI Calls</div>
-            </div>
-            <div class="arrow-h">◀-▶</div>
-            <div class="node db-s3" style="min-width: 140px;">Amazon S3 (Audit)</div>
-          </div>
-          <div class="arrow-v">▲ (Polls SQS FIFO Queue)</div>
-          <div class="flow-row">
-            <div class="node active">AI Engine (RCA - Bedrock)</div>
-            <div class="arrow-h">◀</div>
-            <div class="node">Integration Lambda</div>
-            <div class="arrow-h">◀</div>
-            <div class="node active">Slack / Jira (Human Gate)</div>
-          </div>
-        </div>
-        
-        <div class="card" style="margin-top: 0.8rem; padding: 1rem 1.5rem;">
-          <p style="font-size: 0.95rem;"><strong>Ranh giới bảo mật mạng:</strong> Sử dụng <span class="highlight">K8s NetworkPolicy</span> cô lập giao tiếp mạng nội bộ của Pod AI, chặn hoàn toàn các kết nối ra ngoài phạm vi namespaces cho phép.</p>
+        <h2><i class="fa-solid fa-network-wired"></i> 5. Sơ Đồ Kiến Trúc Hạ Tầng (Infrastructure Diagram)</h2>
+        <!-- Embedded Diagram Image from assets -->
+        <img class="embedded-diagram zoomable" src="assets/infra-architecture-diagram.png" alt="Sơ Đồ Kiến Trúc Hạ Tầng AIOps" onclick="openLightbox(this.src)">
+        <div class="card" style="margin-top: 0.3rem; padding: 0.4rem 1rem;">
+          <p style="font-size: 0.85rem; text-align: center;">
+            <i class="fa-solid fa-magnifying-glass-plus highlight"></i> <em>Click vào sơ đồ để phóng to toàn màn hình.</em> &nbsp;|&nbsp; <i class="fa-solid fa-shield-halved green"></i> <strong>Ranh giới bảo mật mạng:</strong> Sử dụng <strong>K8s NetworkPolicy</strong> cô lập giao tiếp mạng nội bộ của Pod AI, chặn hoàn toàn các kết nối ra ngoài phạm vi namespaces cho phép.
+          </p>
         </div>
       </div>
     </div>
@@ -641,25 +540,25 @@
     <!-- SLIDE 7: Shared State & Responsibility -->
     <div class="slide">
       <div class="slide-content">
-        <h2>6. Ranh Giới Lưu Trữ & Sở Hữu Dữ Liệu</h2>
+        <h2><i class="fa-solid fa-database"></i> 6. Ranh Giới Lưu Trữ & Sở Hữu Dữ Liệu</h2>
         <div class="grid-2">
           <div class="card">
-            <h3>Thiết kế Cơ sở dữ liệu & Artifacts Store</h3>
+            <h3><i class="fa-solid fa-hard-drive highlight"></i> Thiết kế Cơ sở dữ liệu & Artifacts Store</h3>
             <ul>
-              <li><span class="highlight">Chế độ On-demand DynamoDB:</span> Tiết kiệm chi phí khi hệ thống nhàn rỗi.
-                <br>➔ Bảng <code>idempotency</code>: Chống trùng lặp alert đầu vào.
+              <li class="no-bullet"><i class="fa-solid fa-database li-icon green"></i> <span class="highlight">Chế độ On-demand DynamoDB:</span> Tiết kiệm chi phí.
+                <br>➔ Bảng <code>idempotency</code>: Chống trùng lặp alert.
                 <br>➔ Bảng <code>incident-state</code>: Theo dõi tiến trình trạng thái sự cố.
               </li>
-              <li><span class="highlight">S3 Object Lock (Bất biến):</span> Lưu trữ snapshot payload alert thô, báo cáo RCA, bằng chứng logs/metrics mà AI sử dụng làm bằng chứng RCA phục vụ audit log 90 ngày.</li>
-              <li><span class="highlight">Quy tắc vàng CDO:</span> DynamoDB tuyệt đối không lưu dữ liệu lớn. Chỉ lưu con trỏ (S3 URI) để tối ưu hiệu năng.</li>
+              <li class="no-bullet"><i class="fa-solid fa-file-shield li-icon green"></i> <span class="highlight">S3 Object Lock (Bất biến):</span> Lưu trữ snapshot payload alert thô, báo cáo RCA, bằng chứng logs/metrics phục vụ audit log 90 ngày.</li>
+              <li class="no-bullet"><i class="fa-solid fa-link li-icon green"></i> <span class="highlight">Quy tắc vàng CDO:</span> DynamoDB tuyệt đối không lưu dữ liệu lớn. Chỉ lưu con trỏ (S3 URI) để tối ưu hiệu năng.</li>
             </ul>
           </div>
           <div class="card">
-            <h3>Ranh Giới Trách Nhiệm Rõ Ràng</h3>
+            <h3><i class="fa-solid fa-handshake"></i> Ranh Giới Trách Nhiệm Rõ Ràng</h3>
             <p style="margin-bottom: 0.5rem;"><strong>CDO Team sở hữu Nền Tảng (Platform & Reliability):</strong></p>
-            <p style="font-size: 0.9rem; margin-bottom: 0.8rem; color: #94a3b8; line-height: 1.4;">Vận hành hạ tầng EKS, đường ống SQS FIFO, DB State, tích hợp Jira/Slack & quản trị IAM tối giản (least-privilege).</p>
+            <p style="font-size: 0.9rem; margin-bottom: 0.8rem; color: #94a3b8; line-height: 1.4;"><i class="fa-solid fa-gears highlight"></i> Vận hành hạ tầng EKS, đường ống SQS FIFO, DB State, tích hợp Jira/Slack & quản trị IAM tối giản (least-privilege).</p>
             <p style="margin-bottom: 0.5rem;"><strong>AIOps/AI Team sở hữu Logic Chẩn Đoán (RCA Inference):</strong></p>
-            <p style="font-size: 0.9rem; color: #94a3b8; line-height: 1.4;">Sinh chẩn đoán, đề xuất hành động. AI Engine chỉ nhận input đã chuẩn hóa và query logs/metrics theo quyền hạn giới hạn.</p>
+            <p style="font-size: 0.9rem; color: #94a3b8; line-height: 1.4;"><i class="fa-solid fa-robot highlight"></i> Sinh chẩn đoán, đề xuất hành động. AI Engine chỉ nhận input đã chuẩn hóa và query logs/metrics theo quyền hạn giới hạn.</p>
           </div>
         </div>
       </div>
@@ -668,22 +567,22 @@
     <!-- SLIDE 8: Resilient Alert Pipeline -->
     <div class="slide">
       <div class="slide-content">
-        <h2>7. Đường Ống Cảnh Báo Đáng Tin Cậy (Resilient Pipeline)</h2>
+        <h2><i class="fa-solid fa-filter"></i> 7. Đường Ống Cảnh Báo Đáng Tin Cậy (Resilient Pipeline)</h2>
         <div class="grid-2">
           <div class="card">
-            <h3>Noise Control & Buffering</h3>
+            <h3><i class="fa-solid fa-arrows-split-up-and-left highlight"></i> Noise Control & Buffering</h3>
             <ul>
-              <li><span class="highlight">Layer 1 - Alertmanager:</span> Gom nhóm alert theo thời gian, ức chế (inhibit) cảnh báo phụ thuộc, cấu hình repeat interval để chặn spam.</li>
-              <li><span class="highlight">Ingest Lambda (Chống trùng lặp):</span> Webhook gửi đến Ingest Lambda check bảng <code>idempotency</code>. Chống duplicate và chuẩn hóa metadata.</li>
-              <li><span class="highlight">SQS FIFO Queue:</span> Bộ đệm bền vững bảo vệ cảnh báo khỏi bị mất mát. Hỗ trợ hàng đợi lỗi DLQ (Dead Letter Queue) để cô lập poison messages.</li>
+              <li class="no-bullet"><i class="fa-solid fa-compress-arrows-alt li-icon"></i> <span class="highlight">Layer 1 - Alertmanager:</span> Gom nhóm alert theo thời gian, ức chế (inhibit) cảnh báo phụ thuộc, cấu hình repeat interval để chặn spam.</li>
+              <li class="no-bullet"><i class="fa-solid fa-code li-icon"></i> <span class="highlight">Ingest Lambda (Chống trùng):</span> Webhook gửi đến Ingest Lambda check bảng <code>idempotency</code>. Chống duplicate và chuẩn hóa metadata.</li>
+              <li class="no-bullet"><i class="fa-solid fa-list-ol li-icon"></i> <span class="highlight">SQS FIFO Queue:</span> Bộ đệm bền vững bảo vệ cảnh báo khỏi bị mất mát. Hỗ trợ hàng đợi lỗi DLQ (Dead Letter Queue) để cô lập poison messages.</li>
             </ul>
           </div>
           <div class="card">
-            <h3>Layer 2 - CDO Correlator & Human Gate</h3>
+            <h3><i class="fa-solid fa-user-check highlight"></i> Layer 2 - CDO Correlator & Human Gate</h3>
             <ul>
-              <li><span class="highlight">Correlation (Gom nhóm chéo):</span> Nhóm các alert triệu chứng từ nhiều dịch vụ khác nhau xảy ra cùng một thời điểm vào một Incident ID duy nhất.</li>
-              <li><span class="highlight">Gating AI Calls (AI Call Gating):</span> Kiểm tra bảng trạng thái sự cố. Chỉ gọi AI Bedrock khi phát hiện incident mới hoặc có thay đổi nghiêm trọng, tránh lãng phí tiền API.</li>
-              <li><span class="highlight">Human-in-the-loop:</span> AI chỉ đề xuất, con người nhấn nút xác nhận trên Slack để cập nhật/tạo thật Jira ticket.</li>
+              <li class="no-bullet"><i class="fa-solid fa-object-group li-icon"></i> <span class="highlight">Correlation (Gom nhóm chéo):</span> Nhóm các alert triệu chứng từ nhiều dịch vụ khác nhau xảy ra cùng một thời điểm vào một Incident ID duy nhất.</li>
+              <li class="no-bullet"><i class="fa-solid fa-shield li-icon"></i> <span class="highlight">Gating AI Calls (AI Call Gating):</span> Kiểm tra bảng trạng thái sự cố. Chỉ gọi AI Bedrock khi phát hiện incident mới hoặc có thay đổi nghiêm trọng, tránh lãng phí tiền API.</li>
+              <li class="no-bullet"><i class="fa-solid fa-user-astronaut li-icon"></i> <span class="highlight">Human-in-the-loop:</span> AI chỉ đề xuất, con người nhấn nút xác nhận trên Slack để cập nhật/tạo thật Jira ticket.</li>
             </ul>
           </div>
         </div>
@@ -693,22 +592,22 @@
     <!-- SLIDE 9: Observability Stack -->
     <div class="slide">
       <div class="slide-content">
-        <h2>8. Hệ Thống Giám Sát (Observability Stack)</h2>
+        <h2><i class="fa-solid fa-magnifying-glass-chart"></i> 8. Hệ Thống Giám Sát (Observability Stack)</h2>
         <div class="card">
-          <p style="margin-bottom: 0.8rem;">Nền tảng của chúng tôi phân tách rõ ràng dữ liệu giám sát thông thường và luồng cảnh báo khẩn cấp để đảm bảo hiệu năng tối ưu.</p>
+          <p style="margin-bottom: 0.8rem;"><i class="fa-solid fa-sliders"></i> Nền tảng của chúng tôi phân tách rõ ràng dữ liệu giám sát thông thường và luồng cảnh báo khẩn cấp để đảm bảo hiệu năng tối ưu.</p>
           <div class="grid-3">
             <div class="card" style="background-color: rgba(15, 23, 42, 0.4); padding: 1rem 1.25rem;">
-              <h4 class="highlight">Metrics (Chỉ số)</h4>
+              <h4 class="highlight"><i class="fa-solid fa-chart-line"></i> Metrics (Chỉ số)</h4>
               <p style="font-size: 0.85rem; margin-top: 0.5rem; line-height: 1.4;"><strong>Prometheus Operator:</strong> Thu thập metric in-cluster của microservices.
               <br><br><strong>CloudWatch Metrics:</strong> Đo lường các AWS services managed (Lambda, SQS backlog, DB throttles).</p>
             </div>
             <div class="card" style="background-color: rgba(15, 23, 42, 0.4); padding: 1rem 1.25rem;">
-              <h4 class="highlight">Logs (Nhật ký)</h4>
+              <h4 class="highlight"><i class="fa-solid fa-align-left"></i> Logs (Nhật ký)</h4>
               <p style="font-size: 0.85rem; margin-top: 0.5rem; line-height: 1.4;"><strong>Grafana Loki + Alloy:</strong> Thu thập log ứng dụng trên EKS đính kèm metadata.
               <br><br><strong>CloudWatch Logs:</strong> Lưu logs AWS services (Retention set 14 ngày để giảm chi phí).</p>
             </div>
             <div class="card" style="background-color: rgba(15, 23, 42, 0.4); padding: 1rem 1.25rem;">
-              <h4 class="highlight">Traces & Visual</h4>
+              <h4 class="highlight"><i class="fa-solid fa-bezier-curve"></i> Traces & Visual</h4>
               <p style="font-size: 0.85rem; margin-top: 0.5rem; line-height: 1.4;"><strong>OpenTelemetry:</strong> Đẩy traces về AWS X-Ray.
               <br><br><strong>Grafana:</strong> Dashboard hợp nhất giúp SRE điều tra và AI query thông tin RCA.</p>
             </div>
@@ -720,92 +619,13 @@
     <!-- SLIDE 10: CI/CD Pipeline -->
     <div class="slide">
       <div class="slide-content">
-        <h2>9. Sơ Đồ Quy Trình CI/CD Phân Cấp (Hierarchical CI/CD)</h2>
-        
-        <div class="pipeline-container">
-          <!-- Stage 0 -->
-          <div class="pipeline-stage">
-            <div class="stage-title stage-0">Stage 0: Manifests</div>
-            <div class="stage-steps">
-              <div class="step-item">
-                <span class="step-name">Kustomize Build</span>
-                <span class="step-desc">Ghép YAML, check ref</span>
-              </div>
-              <div class="step-item">
-                <span class="step-name">Kubeconform</span>
-                <span class="step-desc">Check API schema K8s</span>
-              </div>
-              <div class="step-item">
-                <span class="step-name">Gator Test (OPA)</span>
-                <span class="step-desc">Check CPU limits, no root</span>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Stage 1 -->
-          <div class="pipeline-stage">
-            <div class="stage-title stage-1">Stage 1: Sandbox</div>
-            <div class="stage-steps">
-              <div class="step-item">
-                <span class="step-name">Validation checks</span>
-                <span class="step-desc">Eslint, mypy, pytest</span>
-              </div>
-              <div class="step-item">
-                <span class="step-name">Docker Build & Scan</span>
-                <span class="step-desc">Build image, Trivy scan</span>
-              </div>
-              <div class="step-item">
-                <span class="step-name">GitOps CD Commit</span>
-                <span class="step-desc">Update tag in sandbox overlay</span>
-              </div>
-              <div class="step-item">
-                <span class="step-name">ArgoCD Auto-Sync</span>
-                <span class="step-desc">Deploy to Sandbox cluster</span>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Stage 2 -->
-          <div class="pipeline-stage">
-            <div class="stage-title stage-2">Stage 2: Staging</div>
-            <div class="stage-steps">
-              <div class="step-item">
-                <span class="step-name">Digest Verification</span>
-                <span class="step-desc">Khớp SHA ECR từ Stage 1</span>
-              </div>
-              <div class="step-item">
-                <span class="step-name">Cosign Signing</span>
-                <span class="step-desc">Ký số xác thực nguồn gốc</span>
-              </div>
-              <div class="step-item">
-                <span class="step-name">ArgoCD Rollout Wave</span>
-                <span class="step-desc">Deploy sync waves 0 đến 4</span>
-              </div>
-              <div class="step-item">
-                <span class="step-name">Staging Testing</span>
-                <span class="step-desc">Integration & Load test (k6)</span>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Stage 3 -->
-          <div class="pipeline-stage">
-            <div class="stage-title stage-3">Stage 3: Production</div>
-            <div class="stage-steps">
-              <div class="step-item">
-                <span class="step-name">Promote Artifact</span>
-                <span class="step-desc">Copy ECR (no rebuild), Cosign sign</span>
-              </div>
-              <div class="step-item">
-                <span class="step-name">Canary Rollout</span>
-                <span class="step-desc">25% ➔ 50% ➔ 75% ➔ 100% (10m pause)</span>
-              </div>
-              <div class="step-item">
-                <span class="step-name">Analysis & Rollback</span>
-                <span class="step-desc">Auto rollback if criteria failed</span>
-              </div>
-            </div>
-          </div>
+        <h2><i class="fa-solid fa-code-fork"></i> 9. Sơ Đồ Quy Trình CI/CD Phân Cấp (Hierarchical CI/CD)</h2>
+        <!-- Embedded Diagram Image from assets -->
+        <img class="embedded-diagram zoomable" src="assets/diagram_cicd-CI-CD-pipline.drawio (2).png" alt="Sơ Đồ CI/CD Pipeline Phân Cấp" onclick="openLightbox(this.src)">
+        <div class="card" style="margin-top: 0.3rem; padding: 0.4rem 1rem;">
+          <p style="font-size: 0.85rem; text-align: center;">
+            <i class="fa-solid fa-magnifying-glass-plus highlight"></i> <em>Click vào sơ đồ để phóng to toàn màn hình.</em> &nbsp;|&nbsp; <i class="fa-solid fa-circle-check green"></i> <strong>Quality Gates:</strong> Từng giai đoạn (Sandbox ➔ Staging ➔ Prod) được kiểm soát bởi các hàng rào bảo mật tự động: <strong>Trivy</strong> (scan lỗ hổng), <strong>Cosign</strong> (ký số), và <strong>ArgoCD</strong> (GitOps sync).
+          </p>
         </div>
       </div>
     </div>
@@ -813,31 +633,31 @@
     <!-- SLIDE 11: Production Canary & Rollback -->
     <div class="slide">
       <div class="slide-content">
-        <h2>10. Chiến Lược Triển Khai Canary & Tự Động Rollback</h2>
+        <h2><i class="fa-solid fa-arrows-spin"></i> 10. Chiến Lược Triển Khai Canary & Tự Động Rollback</h2>
         <div class="grid-2">
           <div class="card">
-            <h3>Chiến dịch Canary Progressive (Prod)</h3>
+            <h3><i class="fa-solid fa-chart-area highlight"></i> Chiến dịch Canary Progressive (Prod)</h3>
             <ul>
-              <li>Thay thế cấu hình <code>Deployment</code> bằng <code>Rollout</code> CRD (Argo Rollouts).</li>
-              <li><span class="highlight">Bảng phân chia traffic:</span>
+              <li class="no-bullet"><i class="fa-solid fa-bezier-curve li-icon"></i> Thay thế cấu hình <code>Deployment</code> bằng <code>Rollout</code> CRD (Argo Rollouts).</li>
+              <li class="no-bullet"><i class="fa-solid fa-traffic-light li-icon"></i> <span class="highlight">Bảng phân chia traffic:</span>
                 <br>➔ Giai đoạn 1: Chuyển 25% traffic đến bản Canary. Dừng 10 phút.
                 <br>➔ Giai đoạn 2: Tăng lên 50% traffic. Dừng 10 phút.
                 <br>➔ Giai đoạn 3: Tăng lên 75% traffic. Dừng 10 phút.
                 <br>➔ Giai đoạn 4: Hoàn thành 100% traffic về bản mới.
               </li>
-              <li>Quy trình chạy song song với HPA (min 2, max 10 pods) để gánh tải.</li>
+              <li class="no-bullet"><i class="fa-solid fa-people-arrows li-icon"></i> Quy trình chạy song song với HPA (min 2, max 10 pods) để gánh tải.</li>
             </ul>
           </div>
           <div class="card">
-            <h3>Giám sát & Tự động rút lui (Auto-Rollback)</h3>
+            <h3><i class="fa-solid fa-rotate-left red"></i> Giám sát & Tự động rút lui (Auto-Rollback)</h3>
             <ul>
-              <li>Chạy <code>AnalysisTemplate</code> truy vấn metric Prometheus thời gian thực.</li>
-              <li><span class="accent red">Tiêu chí hủy bỏ (Abort Criteria):</span>
+              <li class="no-bullet"><i class="fa-solid fa-magnifying-glass li-icon"></i> Chạy <code>AnalysisTemplate</code> truy vấn metric Prometheus thời gian thực.</li>
+              <li class="no-bullet"><i class="fa-solid fa-ban li-icon red"></i> <span class="accent red">Tiêu chí hủy bỏ (Abort Criteria):</span>
                 <br>➔ Tỷ lệ lỗi Server (5xx) vượt quá <span class="red">&gt; 0.5%</span>.
                 <br>➔ Độ trễ phản hồi P99 vượt quá <span class="red">&gt; 1000ms</span>.
                 <br>➔ Điểm độ tin cậy trung bình của AI chẩn đoán <span class="red">&lt; 0.5</span>.
               </li>
-              <li><span class="green">Thời gian Rollback: &lt; 60 giây</span> (Ngay lập tức cắt traffic khỏi bản lỗi, chuyển 100% về stable version).</li>
+              <li class="no-bullet"><i class="fa-solid fa-clock li-icon green"></i> <span class="green">Thời gian Rollback: &lt; 60 giây</span> (Ngay lập tức cắt traffic khỏi bản lỗi, chuyển 100% về stable version).</li>
             </ul>
           </div>
         </div>
@@ -847,8 +667,8 @@
     <!-- SLIDE 12: Cost Sandbox -->
     <div class="slide">
       <div class="slide-content">
-        <h2>11. Ước Tính Chi Phí Cố Định - Môi Trường Sandbox</h2>
-        <p style="margin-bottom: 0.3rem; font-size: 0.95rem;">Cấu hình tối ưu hóa chi phí cao: 2 Vùng sẵn sàng (AZs), us-east-1, Không sử dụng WAF/CloudTrail.</p>
+        <h2><i class="fa-solid fa-calculator"></i> 11. Ước Tính Chi Phí Cố Định - Môi Trường Sandbox</h2>
+        <p style="margin-bottom: 0.3rem; font-size: 0.95rem;"><i class="fa-solid fa-circle-exclamation yellow"></i> Cấu hình tối ưu hóa chi phí cao: 2 Vùng sẵn sàng (AZs), us-east-1, Không sử dụng WAF/CloudTrail.</p>
         <table>
           <thead>
             <tr>
@@ -910,7 +730,7 @@
               <td>$0.00</td>
             </tr>
             <tr style="font-weight: bold; background-color: rgba(14, 165, 233, 0.1);">
-              <td colspan="3" style="color: var(--accent-light);">TỔNG CHI PHÍ CỐ ĐỊNH / THÁNG</td>
+              <td colspan="3" style="color: var(--accent-light);"><i class="fa-solid fa-coins"></i> TỔNG CHI PHÍ CỐ ĐỊNH / THÁNG</td>
               <td style="color: var(--accent-light);">~$0.465</td>
               <td style="color: var(--accent-light);">~$342.58</td>
             </tr>
@@ -922,8 +742,8 @@
     <!-- SLIDE 13: Cost Prod -->
     <div class="slide">
       <div class="slide-content">
-        <h2>12. Ước Tính Chi Phí Cố Định - Môi Trường Production</h2>
-        <p style="margin-bottom: 0.3rem; font-size: 0.95rem;">Cấu hình High Availability: Sẵn sàng cao trên 3 AZs, Kích hoạt AWS WAF chặn tấn công điểm cuối public.</p>
+        <h2><i class="fa-solid fa-scale-balanced"></i> 12. Ước Tính Chi Phí Cố Định - Môi Trường Production</h2>
+        <p style="margin-bottom: 0.3rem; font-size: 0.95rem;"><i class="fa-solid fa-shield-halved green"></i> Cấu hình High Availability: Sẵn sàng cao trên 3 AZs, Kích hoạt AWS WAF chặn tấn công điểm cuối public.</p>
         <table>
           <thead>
             <tr>
@@ -985,7 +805,7 @@
               <td>$3.00</td>
             </tr>
             <tr style="font-weight: bold; background-color: rgba(14, 165, 233, 0.1);">
-              <td colspan="3" style="color: var(--accent-light);">TỔNG CHI PHÍ CỐ ĐỊNH / THÁNG</td>
+              <td colspan="3" style="color: var(--accent-light);"><i class="fa-solid fa-wallet"></i> TỔNG CHI PHÍ CỐ ĐỊNH / THÁNG</td>
               <td style="color: var(--accent-light);">~$0.715</td>
               <td style="color: var(--accent-light);">~$531.14</td>
             </tr>
@@ -997,26 +817,26 @@
     <!-- SLIDE 14: Variable Cost & Free Tier -->
     <div class="slide">
       <div class="slide-content">
-        <h2>13. Chi Phí Biến Đổi & Tác Động Của AWS Free Tier</h2>
-        <p style="margin-bottom: 0.5rem; font-size: 0.95rem;">Dự báo chi phí biến đổi hàng tháng dựa trên baseline **15,000 alert** (~2,500 cuộc gọi phân tích AI Bedrock):</p>
+        <h2><i class="fa-solid fa-cubes"></i> 13. Chi Phí Biến Đổi & Tác Động Của AWS Free Tier</h2>
+        <p style="margin-bottom: 0.5rem; font-size: 0.95rem;"><i class="fa-solid fa-chart-line"></i> Dự báo chi phí biến đổi hàng tháng dựa trên baseline **15,000 alert** (~2,500 cuộc gọi phân tích AI Bedrock):</p>
         <div class="grid-2">
           <div class="card">
-            <h3>Dịch vụ phát sinh chi phí</h3>
+            <h3><i class="fa-solid fa-receipt highlight"></i> Dịch vụ phát sinh chi phí</h3>
             <ul>
-              <li><span class="highlight">Amazon Bedrock (Nova Micro):</span> Model <code>us.amazon.nova-micro-v1:0</code> cực rẻ. 2,500 lần chạy (3k input + 1k output tokens/lần) = <span class="green">~$0.45 / tháng</span>.</li>
-              <li><span class="highlight">DynamoDB (On-Demand):</span> ~150k đọc/ghi + 2GB lưu trữ dữ liệu trạng thái sự cố = <span class="green">~$0.75 / tháng</span>.</li>
-              <li><span class="highlight">CloudWatch Logs:</span> ~10GB logs, trừ đi 5GB Free Tier còn 5GB tính phí = <span class="green">~$2.50 / tháng</span>.</li>
-              <li><span class="highlight">Data Transfer (NAT/PrivateLink):</span> Truyền tải 30GB dữ liệu = <span class="green">~$1.65 / tháng</span>.</li>
+              <li class="no-bullet"><i class="fa-solid fa-robot li-icon"></i> <span class="highlight">Amazon Bedrock (Nova Micro):</span> Model <code>us.amazon.nova-micro-v1:0</code> cực rẻ. 2,500 lần chạy = <span class="green">~$0.45 / tháng</span>.</li>
+              <li class="no-bullet"><i class="fa-solid fa-server li-icon"></i> <span class="highlight">DynamoDB (On-Demand):</span> ~150k đọc/ghi + 2GB lưu trữ dữ liệu trạng thái sự cố = <span class="green">~$0.75 / tháng</span>.</li>
+              <li class="no-bullet"><i class="fa-solid fa-file-lines li-icon"></i> <span class="highlight">CloudWatch Logs:</span> ~10GB logs, trừ đi 5GB Free Tier còn 5GB tính phí = <span class="green">~$2.50 / tháng</span>.</li>
+              <li class="no-bullet"><i class="fa-solid fa-arrows-left-right li-icon"></i> <span class="highlight">Data Transfer (NAT/PrivateLink):</span> Truyền tải 30GB dữ liệu = <span class="green">~$1.65 / tháng</span>.</li>
             </ul>
           </div>
           <div class="card">
-            <h3>Dịch vụ được AWS Free Tier bao phủ</h3>
+            <h3><i class="fa-solid fa-gift green"></i> Dịch vụ được AWS Free Tier bao phủ</h3>
             <ul>
-              <li><span class="highlight">AWS Lambda (Ingest & Integration):</span> 15,000 lần chạy ngắn, nằm hoàn toàn trong hạn mức 1 triệu requests miễn phí = <span class="green">$0.00 / tháng</span>.</li>
-              <li><span class="highlight">Amazon SQS FIFO:</span> Miễn phí vĩnh viễn 1 triệu requests = <span class="green">$0.00 / tháng</span>.</li>
-              <li><span class="highlight">Amazon S3:</span> Lưu trữ audit dưới 5GB standard, miễn phí trong 12 tháng đầu = <span class="green">$0.00 / tháng</span>.</li>
+              <li class="no-bullet"><i class="fa-solid fa-bolt li-icon green"></i> <span class="highlight">AWS Lambda (Ingest & Integration):</span> 15,000 lần chạy ngắn, nằm hoàn toàn trong hạn mức 1 triệu requests miễn phí = <span class="green">$0.00 / tháng</span>.</li>
+              <li class="no-bullet"><i class="fa-solid fa-envelope-open li-icon green"></i> <span class="highlight">Amazon SQS FIFO:</span> Miễn phí vĩnh viễn 1 triệu requests = <span class="green">$0.00 / tháng</span>.</li>
+              <li class="no-bullet"><i class="fa-solid fa-box-archive li-icon green"></i> <span class="highlight">Amazon S3:</span> Lưu trữ audit dưới 5GB standard, miễn phí trong 12 tháng đầu = <span class="green">$0.00 / tháng</span>.</li>
               <li style="border-top: 1px solid var(--card-border); padding-top: 0.5rem; margin-top: 0.5rem; list-style: none; font-weight: bold; font-size: 1.15rem; color: var(--green-color);">
-                Tổng chi phí biến đổi: ~$5.45 / tháng
+                <i class="fa-solid fa-dollar-sign"></i> Tổng chi phí biến đổi: ~$5.45 / tháng
               </li>
             </ul>
           </div>
@@ -1027,7 +847,7 @@
     <!-- SLIDE 15: Comparison -->
     <div class="slide">
       <div class="slide-content">
-        <h2>14. So Sánh Phương Án: EKS-Native vs. Serverless-First</h2>
+        <h2><i class="fa-solid fa-code-compare"></i> 14. So Sánh Phương Án: EKS-Native vs. Serverless-First</h2>
         <table>
           <thead>
             <tr>
@@ -1065,7 +885,9 @@
           </tbody>
         </table>
         <div class="card" style="margin-top: 0.6rem; padding: 0.8rem 1.2rem;">
-          <p style="font-size: 0.95rem;"><strong>Điểm hòa vốn (Break-Even Point):</strong> EKS-Native chịu phí cố định ban đầu cao hơn, nhưng sẽ đạt hiệu quả kinh tế vượt trội khi hệ thống đạt quy mô từ <span class="highlight">50 - 100 tenants</span> hoạt động liên tục hoặc khi xảy ra bão alert.</p>
+          <p style="font-size: 0.95rem;">
+            <i class="fa-solid fa-circle-exclamation highlight"></i> <strong>Điểm hòa vốn (Break-Even Point):</strong> EKS-Native chịu phí cố định ban đầu cao hơn, nhưng sẽ đạt hiệu quả kinh tế vượt trội khi hệ thống đạt quy mô từ <span class="highlight">50 - 100 tenants</span> hoạt động liên tục hoặc khi xảy ra bão alert.
+          </p>
         </div>
       </div>
     </div>
@@ -1073,22 +895,22 @@
     <!-- SLIDE 16: Cost Optimization -->
     <div class="slide">
       <div class="slide-content">
-        <h2>15. Các Chiến Lược Tối Ưu Chi Phí Đã Áp Dụng</h2>
+        <h2><i class="fa-solid fa-piggy-bank"></i> 15. Các Chiến Lược Tối Ưu Chi Phí Đã Áp Dụng</h2>
         <div class="grid-2">
           <div class="card">
-            <h3>Tối ưu hóa Tài nguyên & Hạ tầng</h3>
+            <h3><i class="fa-solid fa-screwdriver-wrench highlight"></i> Tối ưu hóa Tài nguyên & Hạ tầng</h3>
             <ul>
-              <li><span class="green">Loại bỏ môi trường Staging:</span> Tận dụng môi trường Sandbox để chạy kiểm thử tích hợp, tiết kiệm ngay lập tức <span class="highlight">~$342.58 / tháng</span>.</li>
-              <li><span class="green">VPC Endpoint thông minh:</span> Sử dụng Gateway Endpoints (Miễn phí) cho S3 và DynamoDB. Chỉ dùng Interface Endpoints cho các API bắt buộc.</li>
-              <li><span class="green">Tối ưu hóa thời hạn lưu trữ Logs:</span> Cấu hình CloudWatch retention xóa log tự động sau 14 ngày, tránh tích tụ dung lượng lưu trữ đắt đỏ.</li>
+              <li class="no-bullet"><i class="fa-solid fa-circle-minus li-icon green"></i> <span class="green">Loại bỏ môi trường Staging:</span> Tận dụng môi trường Sandbox để chạy kiểm thử tích hợp, tiết kiệm ngay lập tức <span class="highlight">~$342.58 / tháng</span>.</li>
+              <li class="no-bullet"><i class="fa-solid fa-route li-icon green"></i> <span class="green">VPC Endpoint thông minh:</span> Sử dụng Gateway Endpoints (Miễn phí) cho S3 và DynamoDB. Chỉ dùng Interface Endpoints cho các API bắt buộc.</li>
+              <li class="no-bullet"><i class="fa-solid fa-trash-can li-icon green"></i> <span class="green">Tối ưu hóa thời hạn lưu trữ Logs:</span> Cấu hình CloudWatch retention xóa log tự động sau 14 ngày, tránh tích tụ dung lượng lưu trữ đắt đỏ.</li>
             </ul>
           </div>
           <div class="card">
-            <h3>Tối ưu hóa Thiết kế & Vận hành</h3>
+            <h3><i class="fa-solid fa-gears highlight"></i> Tối ưu hóa Thiết kế & Vận hành</h3>
             <ul>
-              <li><span class="green">In-Cluster Observability:</span> Tự vận hành Prometheus và Loki ngay bên trong EKS thay vì thuê các dịch vụ SaaS bên ngoài.</li>
-              <li><span class="green">DynamoDB On-Demand:</span> Thiết lập chế độ tính phí theo lượt đọc/ghi thực tế. Chi phí bằng 0 khi không phát sinh sự cố.</li>
-              <li><span class="green">AI Call Gating:</span> Bộ lọc Correlator Worker chặn đứng các cuộc gọi Bedrock trùng lặp nếu sự cố đang được điều trị, giảm hóa đơn API.</li>
+              <li class="no-bullet"><i class="fa-solid fa-binoculars li-icon green"></i> <span class="green">In-Cluster Observability:</span> Tự vận hành Prometheus và Loki ngay bên trong EKS thay vì thuê các dịch vụ SaaS bên ngoài.</li>
+              <li class="no-bullet"><i class="fa-solid fa-chart-line li-icon green"></i> <span class="green">DynamoDB On-Demand:</span> Thiết lập chế độ tính phí theo lượt đọc/ghi thực tế. Chi phí bằng 0 khi không phát sinh sự cố.</li>
+              <li class="no-bullet"><i class="fa-solid fa-filter li-icon green"></i> <span class="green">AI Call Gating:</span> Bộ lọc Correlator Worker chặn đứng các cuộc gọi Bedrock trùng lặp nếu sự cố đang được điều trị, giảm hóa đơn API.</li>
             </ul>
           </div>
         </div>
@@ -1098,26 +920,26 @@
     <!-- SLIDE 17: Business Value -->
     <div class="slide">
       <div class="slide-content">
-        <h2>16. Giá Trị Mang Lại Cho Khách Hàng B2B SaaS</h2>
+        <h2><i class="fa-solid fa-briefcase"></i> 16. Giá Trị Mang Lại Cho Khách Hàng B2B SaaS</h2>
         <div class="grid-3">
           <div class="card" style="border-top: 4px solid var(--accent-light); padding: 1rem 1.25rem;">
-            <h3 class="highlight">Tăng tốc xử lý</h3>
+            <h3><i class="fa-solid fa-gauge-simple-high highlight"></i> Tăng tốc xử lý</h3>
             <h1 style="font-size: 2rem; margin: 0.5rem 0; color: var(--green-color);">&lt; 30 Giây</h1>
             <p style="font-size: 0.95rem;">Thời gian trung bình chẩn đoán tự động và tạo ticket Jira đầy đủ context so với quy trình cũ mất 30-60 phút. Giảm thiểu tối đa MTTR.</p>
           </div>
           <div class="card" style="border-top: 4px solid var(--green-color); padding: 1rem 1.25rem;">
-            <h3 class="highlight">An Toàn Tuyệt Đối</h3>
+            <h3><i class="fa-solid fa-shield-halved green"></i> An Toàn Tuyệt Đối</h3>
             <h1 style="font-size: 2rem; margin: 0.5rem 0; color: var(--green-color);">100%</h1>
             <p style="font-size: 0.95rem;">Dữ liệu được cô lập hoàn toàn giữa các khách thuê nhờ NetworkPolicy và metadata tagging. Con người (Human-in-the-loop) đưa ra quyết định cuối cùng.</p>
           </div>
           <div class="card" style="border-top: 4px solid var(--yellow-color); padding: 1rem 1.25rem;">
-            <h3 class="highlight">Tự động Onboarding</h3>
+            <h3><i class="fa-solid fa-truck-ramp-box yellow"></i> Tự động Onboarding</h3>
             <h1 style="font-size: 2rem; margin: 0.5rem 0; color: var(--green-color);">&lt; 30 Phút</h1>
             <p style="font-size: 0.95rem;">Khởi tạo hạ tầng, giám sát, và ranh giới bảo mật cho tenant mới hoàn toàn tự động bằng module Terraform, không tốn công sức vận hành.</p>
           </div>
         </div>
         <div class="card" style="margin-top: 1rem; text-align: center; padding: 1rem 1.5rem;">
-          <h3>Đo lường rõ ràng - Sẵn sàng cho Tương lai</h3>
+          <h3><i class="fa-solid fa-arrow-trend-up"></i> Đo lường rõ ràng - Sẵn sàng cho Tương lai</h3>
           <p>Hệ thống cung cấp Dashboard đo lường hiệu năng trực quan trên Grafana, giúp CTO dễ dàng thống kê và báo cáo hiệu quả on-call lên Ban Giám Đốc mỗi quý.</p>
         </div>
       </div>
@@ -1125,12 +947,17 @@
 
   </div>
 
+  <!-- Lightbox Modal for Fullscreen Diagram Zoom -->
+  <div id="lightbox" onclick="closeLightbox()" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(2, 6, 23, 0.95); z-index: 999; justify-content: center; align-items: center; cursor: zoom-out;">
+    <img id="lightbox-img" src="" style="max-width: 95%; max-height: 95%; border: 2px solid #38bdf8; border-radius: 8px; box-shadow: 0 0 30px rgba(56, 189, 248, 0.4);">
+  </div>
+
   <!-- Navigation Elements -->
   <div class="slide-counter" id="counter">Slide 1 of 17</div>
   <div class="controls">
-    <button class="btn" id="prev-btn" onclick="prevSlide()">◀ Prev</button>
-    <button class="btn" id="next-btn" onclick="nextSlide()">Next ▶</button>
-    <button class="btn" id="fs-btn" onclick="toggleFullscreen()">Fullscreen</button>
+    <button class="btn" id="prev-btn" onclick="prevSlide()"><i class="fa-solid fa-chevron-left"></i> Prev</button>
+    <button class="btn" id="next-btn" onclick="nextSlide()">Next <i class="fa-solid fa-chevron-right"></i></button>
+    <button class="btn" id="fs-btn" onclick="toggleFullscreen()"><i class="fa-solid fa-expand"></i> Fullscreen</button>
   </div>
   <div class="progress-container">
     <div class="progress-bar" id="progress"></div>
@@ -1193,6 +1020,18 @@
       } else {
         document.exitFullscreen();
       }
+    }
+
+    // Lightbox modal functions
+    function openLightbox(imgSrc) {
+      const lightbox = document.getElementById('lightbox');
+      const lightboxImg = document.getElementById('lightbox-img');
+      lightboxImg.src = imgSrc;
+      lightbox.style.display = 'flex';
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox').style.display = 'none';
     }
 
     // Initialize slide on load
