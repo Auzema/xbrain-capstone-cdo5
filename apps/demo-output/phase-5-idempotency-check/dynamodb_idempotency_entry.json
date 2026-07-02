@@ -1,0 +1,38 @@
+{
+  "dynamodb_table": "tf1-triage-hub-sandbox-idempotency",
+  "operation": "PutItem",
+  "condition_expression": "attribute_not_exists(PK)",
+  "inserted_successfully": true,
+  "dynamodb_item": {
+    "PK": {
+      "S": "IDEMPOTENCY#tenant-a#prod#alert-book-service-db-pool-001#2026-06-29T10:00:00Z#336eed3c72cd7f0e"
+    },
+    "status": {
+      "S": "PROCESSED"
+    },
+    "tenant_id": {
+      "S": "tenant-a"
+    },
+    "environment": {
+      "S": "prod"
+    },
+    "alert_id": {
+      "S": "alert-book-service-db-pool-001"
+    },
+    "ingest_id": {
+      "S": "ingest-20260701-201930-3a7da5ea"
+    },
+    "raw_alert_uri": {
+      "S": "s3://tf1-triage-hub-sandbox-audit-bucket/tenants/tenant-a/envs/prod/pre-correlation/raw-alerts/2026/07/01/alert-book-service-db-pool-001/ingest-20260701-201930-3a7da5ea.json"
+    },
+    "normalized_alert_uri": {
+      "S": "s3://tf1-triage-hub-sandbox-audit-bucket/tenants/tenant-a/envs/prod/pre-correlation/normalized-alerts/2026/07/01/alert-book-service-db-pool-001/ingest-20260701-201930-3a7da5ea.json"
+    },
+    "created_at": {
+      "S": "2026-07-01T20:19:30.488340Z"
+    },
+    "ttl": {
+      "N": "1785529170"
+    }
+  }
+}
