@@ -1,19 +1,7 @@
 name: CI - AI Engine
 on:
-  push:
-    branches:
-      - "develop"
-      - "release/**"
-      - "hotfix/**"
-      - "feat/**"
-      - "bugfix/**"
-      - "sanbox"
-    paths:
-      - "apps/ai-engine/**"
-  pull_request:
-    branches:
-      - "develop"
-      - "sanbox"
+  # AI team ships their own image (separate repo); apps/ai-engine/capstone/...
+  # build path does not exist in this repo. Manual trigger only.
   workflow_dispatch:
 
 permissions:
