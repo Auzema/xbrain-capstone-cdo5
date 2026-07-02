@@ -27,7 +27,8 @@ configMapGenerator:
   - CDO_INCIDENT_OUTPUT_PREFIX=s3://tf1-triage-hub-sandbox-audit-20260701172515973400000001/incident
   - CDO_TRIAGE_REQUEST_OUTPUT_PREFIX=s3://tf1-triage-hub-sandbox-audit-20260701172515973400000001/triage-request
   - NORMALIZED_ALERTS_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/458580846647/tf1-triage-hub-sandbox-incident-queue.fifo
-  - AIO_TRIAGE_URL=http://platform-service:8080/api/v1/notify
+  - AIO_TRIAGE_URL=http://platform-service/api/v1/notify
+  - PLATFORM_SERVICE_URL=http://platform-service/api/v1/notify
   name: platform-config
 
 images:
