@@ -15,9 +15,9 @@ data "aws_iam_policy_document" "correlator_worker_assume_role" {
     }
 
     condition {
-      test     = "StringEquals"
+      test     = "StringLike"
       variable = "${var.oidc_provider_host}:sub"
-      values   = ["system:serviceaccount:aiops:correlator-worker"]
+      values   = ["system:serviceaccount:*:correlator-worker"]
     }
   }
 }

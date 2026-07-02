@@ -1,0 +1,37 @@
+{
+  "sqs_queue_url": "https://sqs.us-east-1.amazonaws.com/458580846647/tf1-triage-hub-sandbox-incident-queue.fifo",
+  "message_group_id": "abeea53ddeb9d7de70226de5de49c0dd58a9fe0e5a8bb318613f9e09e86a7d93",
+  "message_deduplication_id": "336eed3c72cd7f0e",
+  "message_attributes": {
+    "tenant_id": {
+      "DataType": "String",
+      "StringValue": "tenant-a"
+    },
+    "environment": {
+      "DataType": "String",
+      "StringValue": "prod"
+    },
+    "service": {
+      "DataType": "String",
+      "StringValue": "book-service"
+    },
+    "severity": {
+      "DataType": "String",
+      "StringValue": "critical"
+    }
+  },
+  "message_body": {
+    "schema_version": "cdo.normalized_alert_ref.v1",
+    "ingest_id": "ingest-20260701-201930-3a7da5ea",
+    "alert_id": "alert-book-service-db-pool-001",
+    "tenant_id": "tenant-a",
+    "environment": "prod",
+    "cluster": "eks-prod",
+    "namespace": "bookhub-prod",
+    "service": "book-service",
+    "severity": "critical",
+    "started_at": "2026-06-29T10:00:00Z",
+    "validation_status": "VALID_WITH_WARNINGS",
+    "normalized_alert_uri": "s3://tf1-triage-hub-sandbox-audit-bucket/tenants/tenant-a/envs/prod/pre-correlation/normalized-alerts/2026/07/01/alert-book-service-db-pool-001/ingest-20260701-201930-3a7da5ea.json"
+  }
+}

@@ -22,11 +22,12 @@ configMapGenerator:
   - AWS_REGION=us-east-1
   - AI_ENGINE_URL=http://ai-engine:8080
   - CDO_EVIDENCE_ROOT_URI=s3://tf1-triage-hub-sandbox-audit-20260701172515973400000001
-  - CDO_EVIDENCE_OUTPUT_PREFIX=evidence
+  - CDO_EVIDENCE_OUTPUT_PREFIX=s3://tf1-triage-hub-sandbox-audit-20260701172515973400000001/evidence
   - CDO_STATE_URI=s3://tf1-triage-hub-sandbox-audit-20260701172515973400000001/state/open-incidents.json
-  - CDO_INCIDENT_OUTPUT_PREFIX=incident
-  - CDO_TRIAGE_REQUEST_OUTPUT_PREFIX=triage-request
-  - AIO_TRIAGE_URL=http://ai-engine:8080/v1/triage
+  - CDO_INCIDENT_OUTPUT_PREFIX=s3://tf1-triage-hub-sandbox-audit-20260701172515973400000001/incident
+  - CDO_TRIAGE_REQUEST_OUTPUT_PREFIX=s3://tf1-triage-hub-sandbox-audit-20260701172515973400000001/triage-request
+  - NORMALIZED_ALERTS_QUEUE_URL=https://sqs.us-east-1.amazonaws.com/458580846647/tf1-triage-hub-sandbox-incident-queue.fifo
+  - AIO_TRIAGE_URL=http://platform-service:8080/api/v1/notify
   name: platform-config
 
 images:
